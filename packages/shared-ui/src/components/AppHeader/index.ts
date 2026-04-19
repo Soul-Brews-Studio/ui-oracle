@@ -5,6 +5,7 @@ export { BackendChip } from './BackendChip';
 export type { BackendStatus } from './BackendChip';
 export { HostPicker } from './HostPicker';
 export { MainNav } from './MainNav';
+export { NavDisclosure } from './NavDisclosure';
 export { ToolsDropdown } from './ToolsDropdown';
 export { useMenu, useBackendVersion } from './use-menu';
 export type { NavItem, NavSet, MenuApiItem, CrossOriginResolver } from './nav-types';
