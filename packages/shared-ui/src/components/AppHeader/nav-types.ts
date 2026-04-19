@@ -31,14 +31,10 @@ export function isActivePath(location: Location, path: string): boolean {
   return location.pathname === path.split('?')[0];
 }
 
-/**
- * Host- and query-aware active check. If the item carries a `studio` subdomain,
- * it's active only when the current window host matches. If the item ALSO
- * carries `query`, every key/value must match current `window.location.search`
- * — lets Canvas plugin children (query={plugin:'map'}) highlight correctly
- * while on canvas.*/?plugin=map. Host-only items (no query) match on host.
- * Local items fall back to pathname match.
- */
+// Host- and query-aware active check. studio-scoped item active when current
+// hostname matches; if item also has query, every key/value must match
+// window.location.search (Canvas plugin deep-link highlighting). Local items
+// fall back to pathname match.
 export function isActiveNav(
   location: Location,
   item: { path: string; studio?: string; query?: Record<string, string> },
