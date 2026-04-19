@@ -121,8 +121,17 @@ export function AppHeader({
       style={{
         background: 'rgba(10, 10, 15, 0.7)',
         borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
+        boxShadow: '0 1px 0 rgba(255,255,255,0.04) inset',
       }}
     >
+      <div
+        aria-hidden="true"
+        className="absolute top-0 inset-x-0 h-px opacity-60 pointer-events-none"
+        style={{
+          background:
+            'linear-gradient(to right, transparent 0%, rgba(125,180,255,0.25) 20%, rgba(180,125,255,0.30) 50%, rgba(125,255,220,0.25) 80%, transparent 100%)',
+        }}
+      />
       <div className="flex justify-between items-center gap-4 px-6 py-3 max-w-[1400px] mx-auto">
         <Brand label={brandLabel}>
           <VersionChip backendVersion={backendVersion} />
