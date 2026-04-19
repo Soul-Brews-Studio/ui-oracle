@@ -86,10 +86,18 @@ export function NavDisclosure({ item, crossOriginHref }: NavDisclosureProps) {
           </button>
         )}
       </span>
-      {open && children.length > 0 && (
+      {children.length > 0 && (
         <>
-          <div className="absolute top-full left-0 right-0 h-2" />
-          <div className="absolute top-[calc(100%+4px)] left-0 bg-bg-card/95 backdrop-blur-xl border border-border rounded-xl p-1 min-w-[180px] z-[200]" style={{boxShadow: '0 10px 40px -10px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.04)'}}>
+          <div className="absolute top-full left-0 right-0 h-2" aria-hidden="true" />
+          <div
+            className={`absolute top-[calc(100%+4px)] left-0 bg-bg-card/95 backdrop-blur-xl border border-border rounded-xl p-1 min-w-[180px] z-[200] transition-all duration-150 ease-out ${
+              open
+                ? 'opacity-100 translate-y-0 pointer-events-auto'
+                : 'opacity-0 -translate-y-1 pointer-events-none'
+            }`}
+            style={{ boxShadow: '0 10px 40px -10px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.04)' }}
+            role="menu"
+          >
             {children.map((child) => {
               const href = crossOriginHref(child);
               const childClass = `block px-3 py-2 rounded-lg text-[13px] whitespace-nowrap transition-all duration-150 ${
@@ -104,6 +112,7 @@ export function NavDisclosure({ item, crossOriginHref }: NavDisclosureProps) {
                     href={href}
                     className={childClass}
                     onClick={() => setOpen(false)}
+                    role="menuitem"
                   >
                     {child.label}
                   </a>
@@ -115,6 +124,7 @@ export function NavDisclosure({ item, crossOriginHref }: NavDisclosureProps) {
                   to={child.path}
                   className={childClass}
                   onClick={() => setOpen(false)}
+                  role="menuitem"
                 >
                   {child.label}
                 </Link>

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import type { CrossOriginResolver, NavItem } from './nav-types';
-import { isActivePath } from './nav-types';
+import { isActiveNav } from './nav-types';
 
 interface ToolsDropdownProps {
   items: NavItem[];
@@ -17,7 +17,7 @@ export function ToolsDropdown({ items, crossOriginHref, label = 'Tools ▾' }: T
   const location = useLocation();
   const [open, setOpen] = useState(false);
 
-  const anyActive = items.some((t) => isActivePath(location, t.path));
+  const anyActive = items.some((t) => isActiveNav(location, t));
 
   return (
     <div
@@ -35,42 +35,38 @@ export function ToolsDropdown({ items, crossOriginHref, label = 'Tools ▾' }: T
       >
         {label}
       </button>
-      {open && (
-        <>
-          <div className="absolute top-full left-0 right-0 h-2" />
-          <div className="absolute top-[calc(100%+4px)] right-0 bg-bg-card border border-border rounded-xl p-1 min-w-[140px] shadow-lg z-[200]">
-            {items.map((item) => {
-              const href = crossOriginHref(item);
-              if (href) {
-                return (
-                  <a
-                    key={href}
-                    href={href}
-                    className="block px-3 py-2 rounded-lg text-[13px] whitespace-nowrap transition-all duration-150 text-text-secondary hover:bg-white/5 hover:text-accent"
-                    onClick={() => setOpen(false)}
-                  >
-                    {item.label}
-                  </a>
-                );
-              }
-              return (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  className={`block px-3 py-2 rounded-lg text-[13px] whitespace-nowrap transition-all duration-150 ${
-                    isActivePath(location, item.path)
-                      ? 'bg-accent/10 text-accent'
-                      : 'text-text-secondary hover:bg-white/5 hover:text-accent'
-                  }`}
-                  onClick={() => setOpen(false)}
-                >
-                  {item.label}
-                </Link>
-              );
-            })}
-          </div>
-        </>
-      )}
+      <div className="absolute top-full left-0 right-0 h-2" aria-hidden="true" />
+      <div
+        className={`absolute top-[calc(100%+4px)] right-0 bg-bg-card/95 backdrop-blur-xl border border-border rounded-xl p-1 min-w-[180px] z-[200] transition-all duration-150 ease-out ${
+          open
+            ? 'opacity-100 translate-y-0 pointer-events-auto'
+            : 'opacity-0 -translate-y-1 pointer-events-none'
+        }`}
+        style={{ boxShadow: '0 10px 40px -10px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.04)' }}
+        role="menu"
+      >
+        {items.map((item) => {
+          const href = crossOriginHref(item);
+          const active = isActiveNav(location, item);
+          const cls = `block px-3 py-2 rounded-lg text-[13px] whitespace-nowrap transition-all duration-150 ${
+            active
+              ? 'bg-accent/15 text-accent font-semibold'
+              : 'text-text-secondary hover:bg-white/5 hover:text-accent'
+          }`;
+          if (href) {
+            return (
+              <a key={href} href={href} className={cls} onClick={() => setOpen(false)} role="menuitem">
+                {item.label}
+              </a>
+            );
+          }
+          return (
+            <Link key={item.path} to={item.path} className={cls} onClick={() => setOpen(false)} role="menuitem">
+              {item.label}
+            </Link>
+          );
+        })}
+      </div>
     </div>
   );
 }
