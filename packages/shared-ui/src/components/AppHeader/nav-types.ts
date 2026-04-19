@@ -5,11 +5,14 @@ export type NavItem = {
   label: string;
   studio?: string;
   query?: Record<string, string>;
+  children?: NavItem[];
 };
 
 export type NavSet = { main: NavItem[]; tools: NavItem[] };
 
 export type MenuApiItem = {
+  id?: string;
+  parentId?: string | null;
   path: string;
   label: string;
   group?: string;
@@ -28,15 +31,17 @@ export function isActivePath(location: Location, path: string): boolean {
   return location.pathname === path.split('?')[0];
 }
 
+type OrderedNavItem = NavItem & { order: number };
+
 export function buildNavSet(items: MenuApiItem[]): NavSet {
-  const main: Array<NavItem & { order: number }> = [];
-  const tools: Array<NavItem & { order: number }> = [];
+  const main: OrderedNavItem[] = [];
+  const tools: OrderedNavItem[] = [];
+  const byId = new Map<string, OrderedNavItem>();
+  const childrenByParent = new Map<string, OrderedNavItem[]>();
+
   for (const item of items) {
     if (!item || typeof item.path !== 'string' || typeof item.label !== 'string') continue;
-    const bucket =
-      item.group === 'tools' ? tools : item.group === 'main' ? main : null;
-    if (!bucket) continue;
-    const entry: NavItem & { order: number } = {
+    const entry: OrderedNavItem = {
       path: item.path,
       label: item.label,
       order: typeof item.order === 'number' ? item.order : 999,
@@ -49,17 +54,33 @@ export function buildNavSet(items: MenuApiItem[]): NavSet {
       }
       if (Object.keys(clean).length > 0) entry.query = clean;
     }
-    bucket.push(entry);
+
+    if (typeof item.id === 'string' && item.id) byId.set(item.id, entry);
+
+    if (typeof item.parentId === 'string' && item.parentId) {
+      const bucket = childrenByParent.get(item.parentId) ?? [];
+      bucket.push(entry);
+      childrenByParent.set(item.parentId, bucket);
+      continue;
+    }
+
+    const topBucket =
+      item.group === 'tools' ? tools : item.group === 'main' ? main : null;
+    if (!topBucket) continue;
+    topBucket.push(entry);
   }
-  const byOrder = (a: { order: number }, b: { order: number }) => a.order - b.order;
+
+  // Attach children to their parents (by id). Unresolved parents are dropped.
+  for (const [parentId, kids] of childrenByParent.entries()) {
+    const parent = byId.get(parentId);
+    if (!parent) continue;
+    kids.sort(byOrder);
+    parent.children = kids.map(strip);
+  }
+
   main.sort(byOrder);
   tools.sort(byOrder);
-  const strip = ({ path, label, studio, query }: NavItem & { order: number }): NavItem => {
-    const out: NavItem = { path, label };
-    if (studio) out.studio = studio;
-    if (query) out.query = query;
-    return out;
-  };
+
   const mainItems = main.map(strip);
   return {
     main: mainItems.some((n) => n.path === '/' && !n.studio)
@@ -67,4 +88,16 @@ export function buildNavSet(items: MenuApiItem[]): NavSet {
       : [{ path: '/', label: 'Overview' }, ...mainItems],
     tools: tools.map(strip),
   };
+}
+
+function byOrder(a: { order: number }, b: { order: number }) {
+  return a.order - b.order;
+}
+
+function strip(entry: OrderedNavItem): NavItem {
+  const out: NavItem = { path: entry.path, label: entry.label };
+  if (entry.studio) out.studio = entry.studio;
+  if (entry.query) out.query = entry.query;
+  if (entry.children) out.children = entry.children;
+  return out;
 }

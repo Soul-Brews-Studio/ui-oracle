@@ -1,6 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import type { CrossOriginResolver, NavItem } from './nav-types';
 import { isActivePath } from './nav-types';
+import { NavDisclosure } from './NavDisclosure';
 
 interface MainNavProps {
   items: NavItem[];
@@ -9,7 +10,8 @@ interface MainNavProps {
 
 /**
  * Top-level nav items. Renders either internal `<Link>` or cross-origin `<a>`
- * based on `crossOriginHref(item)`. Fully host-agnostic.
+ * based on `crossOriginHref(item)`. Items with `children` render a disclosure
+ * panel (hover desktop, tap mobile). Fully host-agnostic.
  */
 export function MainNav({ items, crossOriginHref }: MainNavProps) {
   const location = useLocation();
@@ -17,6 +19,15 @@ export function MainNav({ items, crossOriginHref }: MainNavProps) {
   return (
     <>
       {items.map((item) => {
+        if (item.children && item.children.length > 0) {
+          return (
+            <NavDisclosure
+              key={item.path + ':' + item.label}
+              item={item}
+              crossOriginHref={crossOriginHref}
+            />
+          );
+        }
         const href = crossOriginHref(item);
         if (href) {
           return (

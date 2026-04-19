@@ -20,6 +20,25 @@ const DEFAULT_NAV: NavSet = {
     { path: '/sessions', label: 'Sessions' },
     { path: '/plugins', label: 'Plugins' },
     { path: '/activity?tab=searches', label: 'Activity' },
+    {
+      path: '/',
+      label: 'Canvas',
+      studio: 'canvas.buildwithoracle.com',
+      children: [
+        {
+          path: '/canvas?plugin=map',
+          label: 'Map',
+          studio: 'canvas.buildwithoracle.com',
+          query: { plugin: 'map' },
+        },
+        {
+          path: '/canvas?plugin=planets',
+          label: 'Planets',
+          studio: 'canvas.buildwithoracle.com',
+          query: { plugin: 'planets' },
+        },
+      ],
+    },
   ],
   tools: [
     { path: '/playground', label: 'Playground' },
@@ -27,18 +46,6 @@ const DEFAULT_NAV: NavSet = {
     { path: '/evolution', label: 'Evolution' },
     { path: '/traces', label: 'Traces' },
     { path: '/schedule', label: 'Schedule' },
-    {
-      path: '/canvas?plugin=map',
-      label: 'Map',
-      studio: 'canvas.buildwithoracle.com',
-      query: { plugin: 'map' },
-    },
-    {
-      path: '/canvas?plugin=planets',
-      label: 'Planets',
-      studio: 'canvas.buildwithoracle.com',
-      query: { plugin: 'planets' },
-    },
   ],
 };
 
