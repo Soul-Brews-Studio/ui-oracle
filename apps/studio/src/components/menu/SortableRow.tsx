@@ -14,6 +14,7 @@ export interface MenuItem {
   icon: string | null;
   touchedAt: number | null;
   host?: string | null;
+  query?: Record<string, string> | null;
 }
 
 export const GROUPS = ['main', 'tools', 'admin', 'hidden'] as const;
