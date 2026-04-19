@@ -2,6 +2,7 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import type { MenuItem } from './SortableRow';
 import { GROUP_COLORS } from './SortableRow';
+import { QueryCell } from './QueryCell';
 
 const SOURCE_COLORS: Record<string, string> = {
   route: 'bg-blue-500/10 text-blue-300',
@@ -71,6 +72,10 @@ export function TreeRow({ item, depth, hasChildren, parentOptions, onPatch, onEd
         ))}
       </select>
       <span className={`px-2 py-0.5 rounded text-[10px] ${SOURCE_COLORS[item.source] ?? ''}`}>{item.source}</span>
+      <QueryCell
+        value={item.query ?? null}
+        onSave={(next) => onPatch(item.id, { query: next })}
+      />
       {host && (
         <span className="px-2 py-0.5 rounded text-[10px] bg-indigo-500/10 text-indigo-300 border border-indigo-500/30 font-mono" title="Host filter">
           {host}
