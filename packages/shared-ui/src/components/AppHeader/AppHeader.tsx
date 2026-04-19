@@ -11,7 +11,7 @@ import type { CrossOriginResolver, NavItem, NavSet } from './nav-types';
 
 const DEFAULT_NAV: NavSet = {
   main: [
-    { path: '/', label: 'Overview', studio: 'studio.buildwithoracle.com' },
+    { path: '/search', label: 'Search', studio: 'studio.buildwithoracle.com' },
     { path: '/feed', label: 'Feed', studio: 'feed.buildwithoracle.com' },
     { path: '/schedule', label: 'Schedule', studio: 'schedule.buildwithoracle.com' },
     { path: '/map', label: 'Memory' },
@@ -36,7 +36,6 @@ const DEFAULT_NAV: NavSet = {
     },
   ],
   tools: [
-    { path: '/search', label: 'Search' },
     { path: '/pulse', label: 'Pulse' },
     { path: '/sessions', label: 'Sessions' },
     { path: '/plugins', label: 'Plugins' },
