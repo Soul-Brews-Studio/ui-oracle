@@ -75,7 +75,7 @@ export function AppHeader({
   crossOriginHref = defaultCrossOriginHref,
   hideToolsDropdown = false,
 }: AppHeaderProps) {
-  const nav = useMenu(fallbackNav);
+  const { nav, loaded } = useMenu(fallbackNav);
   const backendVersion = useBackendVersion();
 
   return (
@@ -98,7 +98,11 @@ export function AppHeader({
         </div>
       </div>
 
-      <nav className="flex items-center gap-0.5 px-4 pb-2 flex-wrap max-w-[1400px] mx-auto">
+      <nav
+        className={`flex items-center gap-0.5 px-4 pb-2 flex-wrap max-w-[1400px] mx-auto transition-opacity duration-150 ${
+          loaded ? 'opacity-100' : 'opacity-0'
+        }`}
+      >
         <MainNav items={nav.main} crossOriginHref={crossOriginHref} />
         {!hideToolsDropdown && nav.tools.length > 0 && (
           <>
