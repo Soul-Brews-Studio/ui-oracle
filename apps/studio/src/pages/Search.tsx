@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { PageShell } from '@ui-oracle/shared-ui';
 import { search } from '../api/oracle';
 import type { Document } from '../api/oracle';
 import { LogCard } from '../components/LogCard';
@@ -43,7 +44,7 @@ export function Search() {
   }
 
   return (
-    <div className="max-w-[720px] mx-auto py-12 px-6">
+    <PageShell maxWidth="720px">
       <h1 className="text-[32px] font-bold text-text-primary mb-6 text-center">Search Oracle</h1>
 
       <form onSubmit={handleSubmit} className="flex gap-3 mb-8">
@@ -106,6 +107,6 @@ export function Search() {
           </div>
         </div>
       )}
-    </div>
+    </PageShell>
   );
 }

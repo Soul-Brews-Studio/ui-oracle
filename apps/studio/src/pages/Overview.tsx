@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { PageShell } from '@ui-oracle/shared-ui';
 import { getStats, reflect, stripProjectPrefix } from '../api/oracle';
 import type { Document, Stats } from '../api/oracle';
 
@@ -73,7 +74,7 @@ export function Overview() {
   }
 
   return (
-    <div className="max-w-[900px] mx-auto py-12 px-6">
+    <PageShell maxWidth="900px">
       <style>{wisdomAnimationStyle}</style>
 
       <h1 className="text-4xl font-bold text-text-primary mb-2 text-center">Oracle Overview</h1>
@@ -351,6 +352,6 @@ export function Overview() {
           </a>
         </div>
       </div>
-    </div>
+    </PageShell>
   );
 }
