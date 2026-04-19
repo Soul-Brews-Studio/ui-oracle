@@ -15,13 +15,14 @@ interface Props {
   item: MenuItem;
   depth: number;
   hasChildren: boolean;
+  parentOptions: MenuItem[];
   onPatch: (id: number, patch: Partial<MenuItem>) => void;
   onEdit: (item: MenuItem) => void;
   onReset: (id: number) => void;
   onDelete: (id: number) => void;
 }
 
-export function TreeRow({ item, depth, hasChildren, onPatch, onEdit, onReset, onDelete }: Props) {
+export function TreeRow({ item, depth, hasChildren, parentOptions, onPatch, onEdit, onReset, onDelete }: Props) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id });
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -58,6 +59,17 @@ export function TreeRow({ item, depth, hasChildren, onPatch, onEdit, onReset, on
       <span className="font-medium flex-none w-40 truncate">{item.label}</span>
       <code className="text-xs text-text-secondary font-mono flex-1 truncate">{item.path}</code>
       <span className={`px-2 py-0.5 rounded text-[10px] border ${GROUP_COLORS[item.groupKey] ?? ''}`}>{item.groupKey}</span>
+      <select
+        value={item.parentId ?? ''}
+        onChange={(e) => onPatch(item.id, { parentId: e.target.value === '' ? null : Number(e.target.value) })}
+        className="bg-bg-base border border-border rounded px-2 py-1 text-[11px] max-w-[140px]"
+        title="Parent"
+      >
+        <option value="">(top-level)</option>
+        {parentOptions.map((p) => (
+          <option key={p.id} value={p.id}>{p.label}</option>
+        ))}
+      </select>
       <span className={`px-2 py-0.5 rounded text-[10px] ${SOURCE_COLORS[item.source] ?? ''}`}>{item.source}</span>
       {host && (
         <span className="px-2 py-0.5 rounded text-[10px] bg-indigo-500/10 text-indigo-300 border border-indigo-500/30 font-mono" title="Host filter">
