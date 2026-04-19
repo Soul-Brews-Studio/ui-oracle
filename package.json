@@ -30,7 +30,8 @@
     "preview:feed": "bun --cwd apps/feed run preview",
     "deploy:studio": "bun --cwd apps/studio run deploy",
     "deploy:schedule": "bun --cwd apps/schedule run deploy",
-    "deploy:feed": "bun --cwd apps/feed run deploy"
+    "deploy:feed": "bun --cwd apps/feed run deploy",
+    "deploy:canvas": "bun --cwd apps/canvas run deploy"
   },
   "repository": {
     "type": "git",
