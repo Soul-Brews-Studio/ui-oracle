@@ -1,0 +1,114 @@
+import type { ReactNode } from 'react';
+import { hostLabel, isVectorHost } from '../../host';
+import { Brand } from './Brand';
+import { VersionChip } from './VersionChip';
+import { BackendChip } from './BackendChip';
+import { HostPicker } from './HostPicker';
+import { MainNav } from './MainNav';
+import { ToolsDropdown } from './ToolsDropdown';
+import { useBackendVersion, useMenu } from './use-menu';
+import type { CrossOriginResolver, NavItem, NavSet } from './nav-types';
+
+const DEFAULT_NAV: NavSet = {
+  main: [
+    { path: '/', label: 'Overview' },
+    { path: '/feed', label: 'Feed' },
+    { path: '/map', label: 'Memory' },
+    { path: '/search', label: 'Search' },
+    { path: '/forum', label: 'Forum' },
+    { path: '/pulse', label: 'Pulse' },
+    { path: '/sessions', label: 'Sessions' },
+    { path: '/plugins', label: 'Plugins' },
+    { path: '/activity?tab=searches', label: 'Activity' },
+  ],
+  tools: [
+    { path: '/playground', label: 'Playground' },
+    { path: '/compare', label: 'Compare' },
+    { path: '/evolution', label: 'Evolution' },
+    { path: '/traces', label: 'Traces' },
+    { path: '/schedule', label: 'Schedule' },
+  ],
+};
+
+const STUDIO_ORIGIN = 'https://studio.buildwithoracle.com';
+
+interface AppHeaderProps {
+  /** Brand text — default "ARRA 🔮Racle". */
+  brandLabel?: ReactNode;
+  /** Backend reachability probe for the live/demo chip. */
+  ping: () => Promise<boolean>;
+  /** Extra content rendered on the top-row right side (e.g. session stats, logout). */
+  topRowExtras?: ReactNode;
+  /** Fallback nav used until /api/menu responds. Defaults to the standard Oracle menu. */
+  fallbackNav?: NavSet;
+  /** Override cross-origin logic. Default: vector.* → studio.* for non-playground paths. */
+  crossOriginHref?: CrossOriginResolver;
+  /** Hide the "Tools ▾" dropdown. */
+  hideToolsDropdown?: boolean;
+}
+
+function defaultCrossOriginHref(item: NavItem): string | null {
+  const currentHost = hostLabel().replace(' (default)', '');
+  if (item.studio) {
+    return `https://${item.studio}${item.path}?host=${encodeURIComponent(currentHost)}`;
+  }
+  if (isVectorHost()) {
+    const clean = item.path.split('?')[0];
+    const isPlayground = clean === '/' || clean === '/playground';
+    if (!isPlayground) {
+      return `${STUDIO_ORIGIN}${item.path}?host=${encodeURIComponent(currentHost)}`;
+    }
+  }
+  return null;
+}
+
+/**
+ * Default composed header: Brand + VersionChip + HostPicker + BackendChip,
+ * then a MainNav row with optional ToolsDropdown. Apps can still compose their
+ * own header out of the primitives if they need something bespoke.
+ */
+export function AppHeader({
+  brandLabel,
+  ping,
+  topRowExtras,
+  fallbackNav = DEFAULT_NAV,
+  crossOriginHref = defaultCrossOriginHref,
+  hideToolsDropdown = false,
+}: AppHeaderProps) {
+  const nav = useMenu(fallbackNav);
+  const backendVersion = useBackendVersion();
+
+  return (
+    <header
+      className="sticky top-0 z-50 backdrop-blur-xl"
+      style={{
+        background: 'rgba(10, 10, 15, 0.7)',
+        borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
+      }}
+    >
+      <div className="flex justify-between items-center gap-4 px-4 py-2 max-w-[1400px] mx-auto">
+        <Brand label={brandLabel}>
+          <VersionChip backendVersion={backendVersion} />
+        </Brand>
+
+        <div className="flex items-center gap-2 text-xs font-mono shrink-0">
+          <HostPicker />
+          <BackendChip ping={ping} />
+          {topRowExtras}
+        </div>
+      </div>
+
+      <nav className="flex items-center gap-0.5 px-4 pb-2 flex-wrap max-w-[1400px] mx-auto">
+        <MainNav items={nav.main} crossOriginHref={crossOriginHref} />
+        {!hideToolsDropdown && nav.tools.length > 0 && (
+          <>
+            <span className="w-px h-4 bg-border mx-2" />
+            <ToolsDropdown items={nav.tools} crossOriginHref={crossOriginHref} />
+          </>
+        )}
+      </nav>
+    </header>
+  );
+}
+
+export { defaultCrossOriginHref };

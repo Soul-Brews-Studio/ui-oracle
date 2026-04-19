@@ -17,6 +17,7 @@
     "deploy": "bun run build && wrangler deploy"
   },
   "dependencies": {
+    "@ui-oracle/shared-ui": "workspace:*",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-router-dom": "^7.11.0"
