@@ -11,7 +11,7 @@ import type { CrossOriginResolver, NavItem, NavSet } from './nav-types';
 
 const DEFAULT_NAV: NavSet = {
   main: [
-    { path: '/', label: 'Overview' },
+    { path: '/', label: 'Overview', studio: 'studio.buildwithoracle.com' },
     { path: '/feed', label: 'Feed', studio: 'feed.buildwithoracle.com' },
     { path: '/schedule', label: 'Schedule', studio: 'schedule.buildwithoracle.com' },
     {
