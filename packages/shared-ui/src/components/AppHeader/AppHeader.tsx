@@ -50,7 +50,10 @@ interface AppHeaderProps {
 function defaultCrossOriginHref(item: NavItem): string | null {
   const currentHost = hostLabel().replace(' (default)', '');
   if (item.studio) {
-    return `https://${item.studio}${item.path}?host=${encodeURIComponent(currentHost)}`;
+    // `studio` field means "separate app on its own subdomain" — always go to
+    // root of that subdomain. Per-path deep-links (e.g. ?plugin=map) are a
+    // follow-up that needs the menu to carry the cross-origin URL directly.
+    return `https://${item.studio}/?host=${encodeURIComponent(currentHost)}`;
   }
   if (isVectorHost()) {
     const clean = item.path.split('?')[0];
