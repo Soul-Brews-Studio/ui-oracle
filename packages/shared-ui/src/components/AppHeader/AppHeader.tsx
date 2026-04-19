@@ -27,10 +27,33 @@ const DEFAULT_NAV: NavSet = {
     { path: '/evolution', label: 'Evolution' },
     { path: '/traces', label: 'Traces' },
     { path: '/schedule', label: 'Schedule' },
+    {
+      path: '/canvas?plugin=map',
+      label: 'Map',
+      studio: 'canvas.buildwithoracle.com',
+      query: { plugin: 'map' },
+    },
+    {
+      path: '/canvas?plugin=planets',
+      label: 'Planets',
+      studio: 'canvas.buildwithoracle.com',
+      query: { plugin: 'planets' },
+    },
   ],
 };
 
 const STUDIO_ORIGIN = 'https://studio.buildwithoracle.com';
+
+function appendQuery(base: string, query: Record<string, string> | undefined): string {
+  if (!query) return base;
+  const entries = Object.entries(query);
+  if (entries.length === 0) return base;
+  const sep = base.includes('?') ? '&' : '?';
+  const qs = entries
+    .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
+    .join('&');
+  return `${base}${sep}${qs}`;
+}
 
 interface AppHeaderProps {
   /** Brand text — default "ARRA 🔮Racle". */
@@ -50,10 +73,11 @@ interface AppHeaderProps {
 function defaultCrossOriginHref(item: NavItem): string | null {
   const currentHost = hostLabel().replace(' (default)', '');
   if (item.studio) {
-    // `studio` field means "separate app on its own subdomain" — always go to
-    // root of that subdomain. Per-path deep-links (e.g. ?plugin=map) are a
-    // follow-up that needs the menu to carry the cross-origin URL directly.
-    return `https://${item.studio}/?host=${encodeURIComponent(currentHost)}`;
+    // `studio` field means "separate app on its own subdomain" — land at
+    // root of that subdomain. `query` merges additional params for deep-links
+    // (e.g. canvas plugin=map).
+    const base = `https://${item.studio}/?host=${encodeURIComponent(currentHost)}`;
+    return appendQuery(base, item.query);
   }
   if (isVectorHost()) {
     const clean = item.path.split('?')[0];
