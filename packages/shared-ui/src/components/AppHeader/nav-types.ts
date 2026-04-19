@@ -31,28 +31,33 @@ export function isActivePath(location: Location, path: string): boolean {
   return location.pathname === path.split('?')[0];
 }
 
-// Host- and query-aware active check. studio-scoped item active when current
-// hostname matches; if item also has query, every key/value must match
-// window.location.search (Canvas plugin deep-link highlighting). Local items
-// fall back to pathname match.
+// Three-gate active check: host (if studio-scoped), path (always), query (if set).
+// studio is a HOST GATE — it scopes *where* the item can be active, not *whether*
+// the path matters. Previously, a matching host short-circuited to `true` and
+// caused every studio-scoped item to light up on the same origin regardless of
+// pathname (Overview + Search both active on studio.*/ etc.).
 export function isActiveNav(
   location: Location,
   item: { path: string; studio?: string; query?: Record<string, string> },
 ): boolean {
-  if (item.studio && typeof window !== 'undefined') {
+  if (item.studio) {
+    if (typeof window === 'undefined') return false;
     const hostMatch = window.location.hostname === item.studio
       || window.location.hostname.endsWith('.' + item.studio);
     if (!hostMatch) return false;
-    if (item.query) {
-      const params = new URLSearchParams(window.location.search);
-      for (const [k, v] of Object.entries(item.query)) {
-        if (params.get(k) !== v) return false;
-      }
-    }
-    return true;
   }
-  if (item.studio) return false;
-  return isActivePath(location, item.path);
+
+  const itemPath = item.path.split('?')[0];
+  if (location.pathname !== itemPath) return false;
+
+  if (item.query) {
+    if (typeof window === 'undefined') return false;
+    const params = new URLSearchParams(window.location.search);
+    for (const [k, v] of Object.entries(item.query)) {
+      if (params.get(k) !== v) return false;
+    }
+  }
+  return true;
 }
 
 type OrderedNavItem = NavItem & { order: number };
