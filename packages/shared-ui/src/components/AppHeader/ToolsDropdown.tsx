@@ -55,13 +55,13 @@ export function ToolsDropdown({ items, crossOriginHref, label = 'Tools ▾' }: T
           }`;
           if (href) {
             return (
-              <a key={href} href={href} className={cls} onClick={() => setOpen(false)} role="menuitem">
+              <a key={href} href={href} className={cls} onClick={() => setOpen(false)} role="menuitem" aria-current={active ? 'page' : undefined}>
                 {item.label}
               </a>
             );
           }
           return (
-            <Link key={item.path} to={item.path} className={cls} onClick={() => setOpen(false)} role="menuitem">
+            <Link key={item.path} to={item.path} className={cls} onClick={() => setOpen(false)} role="menuitem" aria-current={active ? 'page' : undefined}>
               {item.label}
             </Link>
           );
