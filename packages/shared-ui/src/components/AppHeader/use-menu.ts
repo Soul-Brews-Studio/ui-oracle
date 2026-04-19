@@ -8,10 +8,13 @@ const MENU_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
 /**
  * Load the nav menu from /api/menu with localStorage/idb caching + fallback.
- * Returns the fallback until the fetch completes, then swaps in the server's list.
+ * Returns `{ nav, loaded }` — fallback is kept until the fetch resolves (success
+ * or failure). Callers can gate visibility on `loaded` to avoid a fallback→server
+ * content-jump flash.
  */
-export function useMenu(fallback: NavSet): NavSet {
+export function useMenu(fallback: NavSet): { nav: NavSet; loaded: boolean } {
   const [nav, setNav] = useState<NavSet>(fallback);
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -27,11 +30,13 @@ export function useMenu(fallback: NavSet): NavSet {
           },
           { tag: 'menu' },
         );
+        if (cancelled) return;
         const items: MenuApiItem[] = Array.isArray(data?.items) ? data.items : [];
-        if (cancelled || items.length === 0) return;
-        setNav(buildNavSet(items));
+        if (items.length > 0) setNav(buildNavSet(items));
       } catch {
         // Backend unreachable — keep fallback nav.
+      } finally {
+        if (!cancelled) setLoaded(true);
       }
     })();
     return () => {
@@ -39,7 +44,7 @@ export function useMenu(fallback: NavSet): NavSet {
     };
   }, []);
 
-  return nav;
+  return { nav, loaded };
 }
 
 /**
