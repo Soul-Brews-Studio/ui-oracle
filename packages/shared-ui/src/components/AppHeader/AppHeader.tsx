@@ -14,6 +14,10 @@ const DEFAULT_NAV: NavSet = {
     { path: '/', label: 'Overview', studio: 'studio.buildwithoracle.com' },
     { path: '/feed', label: 'Feed', studio: 'feed.buildwithoracle.com' },
     { path: '/schedule', label: 'Schedule', studio: 'schedule.buildwithoracle.com' },
+    { path: '/map', label: 'Memory' },
+    { path: '/forum', label: 'Forum' },
+    { path: '/activity?tab=searches', label: 'Activity' },
+    { path: '/traces', label: 'Traces' },
     {
       path: '/',
       label: 'Canvas',
@@ -33,16 +37,12 @@ const DEFAULT_NAV: NavSet = {
   ],
   tools: [
     { path: '/search', label: 'Search' },
-    { path: '/forum', label: 'Forum' },
-    { path: '/map', label: 'Memory' },
     { path: '/pulse', label: 'Pulse' },
     { path: '/sessions', label: 'Sessions' },
     { path: '/plugins', label: 'Plugins' },
-    { path: '/activity?tab=searches', label: 'Activity' },
     { path: '/', label: 'Vector Playground', studio: 'vector.buildwithoracle.com' },
     { path: '/compare', label: 'Compare' },
     { path: '/evolution', label: 'Evolution' },
-    { path: '/traces', label: 'Traces' },
   ],
 };
 
