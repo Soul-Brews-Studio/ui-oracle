@@ -18,22 +18,7 @@ const DEFAULT_NAV: NavSet = {
     { path: '/forum', label: 'Forum' },
     { path: '/activity?tab=searches', label: 'Activity' },
     { path: '/traces', label: 'Traces' },
-    {
-      path: '/',
-      label: 'Canvas',
-      studio: 'canvas.buildwithoracle.com',
-      children: [
-        { path: '/', label: 'Map', studio: 'canvas.buildwithoracle.com', query: { plugin: 'map' } },
-        { path: '/', label: 'Planets', studio: 'canvas.buildwithoracle.com', query: { plugin: 'planets' } },
-        { path: '/', label: 'Wave', studio: 'canvas.buildwithoracle.com', query: { plugin: 'wave' } },
-        { path: '/', label: 'Cube', studio: 'canvas.buildwithoracle.com', query: { plugin: 'cube' } },
-        { path: '/', label: 'Torus', studio: 'canvas.buildwithoracle.com', query: { plugin: 'torus' } },
-        { path: '/', label: 'Galaxy', studio: 'canvas.buildwithoracle.com', query: { plugin: 'galaxy' } },
-        { path: '/', label: 'Solar', studio: 'canvas.buildwithoracle.com', query: { plugin: 'solar' } },
-        { path: '/', label: 'Graph 3D', studio: 'canvas.buildwithoracle.com', query: { plugin: 'graph3d' } },
-        { path: '/', label: 'Map 3D', studio: 'canvas.buildwithoracle.com', query: { plugin: 'map3d' } },
-      ],
-    },
+    { path: '/', label: 'Canvas', studio: 'canvas.buildwithoracle.com' },
   ],
   tools: [
     { path: '/schedule', label: 'Schedule', studio: 'schedule.buildwithoracle.com' },
