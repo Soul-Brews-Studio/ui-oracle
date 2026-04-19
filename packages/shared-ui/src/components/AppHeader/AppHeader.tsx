@@ -42,7 +42,7 @@ const DEFAULT_NAV: NavSet = {
     { path: '/sessions', label: 'Sessions' },
     { path: '/plugins', label: 'Plugins' },
     { path: '/activity?tab=searches', label: 'Activity' },
-    { path: '/playground', label: 'Playground' },
+    { path: '/', label: 'Vector Playground', studio: 'vector.buildwithoracle.com' },
     { path: '/compare', label: 'Compare' },
     { path: '/evolution', label: 'Evolution' },
     { path: '/traces', label: 'Traces' },
