@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { PageShell } from '@ui-oracle/shared-ui';
 import { search } from '../api/oracle';
 import type { Document } from '../api/oracle';
 import { demoSearch } from '../data/demo';
@@ -154,7 +155,7 @@ export default function Playground({ backendLive }: { backendLive: boolean }) {
 
       {/* Post-search */}
       {(searched || loading) && (
-        <div className="max-w-[1300px] mx-auto py-6 px-6">
+        <PageShell>
           <form onSubmit={handleSubmit} className="flex max-md:flex-col gap-3 max-w-[720px] mx-auto mb-4">
             <input
               type="text"
@@ -206,7 +207,7 @@ export default function Playground({ backendLive }: { backendLive: boolean }) {
               </div>
             </>
           )}
-        </div>
+        </PageShell>
       )}
 
       {selectedDoc && <DocDrawer doc={selectedDoc} onClose={() => setSelectedDoc(null)} />}

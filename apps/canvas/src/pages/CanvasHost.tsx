@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
+import { PageShell } from '@ui-oracle/shared-ui';
 import { findPlugin, listPlugins } from '../lib/plugins/registry';
 
 export default function CanvasHost() {
@@ -13,7 +14,7 @@ export default function CanvasHost() {
   const all = listPlugins();
 
   return (
-    <main className="max-w-[1400px] mx-auto px-4 py-10 text-text-primary">
+    <PageShell className="text-text-primary">
       <h1 className="text-2xl font-semibold mb-3">Canvas host — phase 1 scaffold</h1>
       <p className="text-text-secondary mb-6">
         Plugin: <code className="bg-bg-card px-2 py-0.5 rounded">{pluginId ?? '(none — pass ?plugin=<id>)'}</code>
@@ -48,6 +49,6 @@ export default function CanvasHost() {
           </ul>
         )}
       </section>
-    </main>
+    </PageShell>
   );
 }

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { PageShell } from '@ui-oracle/shared-ui';
 import type { Document } from '../api/oracle';
 import { getStats } from '../api/oracle';
 import { hostLabel } from '../api/host';
@@ -55,7 +56,7 @@ export default function Compare() {
   const currentHost = hostLabel().replace(' (default)', '');
 
   return (
-    <div className="max-w-[1400px] mx-auto py-6 px-6">
+    <PageShell>
       <CompareHUD
         query={query}
         onQueryChange={setQuery}
@@ -81,6 +82,6 @@ export default function Compare() {
           studioOrigin={STUDIO_ORIGIN}
         />
       )}
-    </div>
+    </PageShell>
   );
 }
