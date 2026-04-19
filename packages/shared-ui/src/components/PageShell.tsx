@@ -20,7 +20,7 @@ export function PageShell({
 }: PageShellProps) {
   return (
     <div
-      className={`mx-auto py-10 px-8 max-md:py-6 max-md:px-5 ${className}`}
+      className={`mx-auto py-8 px-8 max-md:py-6 max-md:px-5 ${className}`}
       style={{ maxWidth }}
     >
       {children}
