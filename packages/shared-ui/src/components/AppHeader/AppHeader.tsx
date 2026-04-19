@@ -12,14 +12,8 @@ import type { CrossOriginResolver, NavItem, NavSet } from './nav-types';
 const DEFAULT_NAV: NavSet = {
   main: [
     { path: '/', label: 'Overview' },
-    { path: '/feed', label: 'Feed' },
-    { path: '/map', label: 'Memory' },
-    { path: '/search', label: 'Search' },
-    { path: '/forum', label: 'Forum' },
-    { path: '/pulse', label: 'Pulse' },
-    { path: '/sessions', label: 'Sessions' },
-    { path: '/plugins', label: 'Plugins' },
-    { path: '/activity?tab=searches', label: 'Activity' },
+    { path: '/feed', label: 'Feed', studio: 'feed.buildwithoracle.com' },
+    { path: '/schedule', label: 'Schedule', studio: 'schedule.buildwithoracle.com' },
     {
       path: '/',
       label: 'Canvas',
@@ -41,11 +35,17 @@ const DEFAULT_NAV: NavSet = {
     },
   ],
   tools: [
+    { path: '/search', label: 'Search' },
+    { path: '/forum', label: 'Forum' },
+    { path: '/map', label: 'Memory' },
+    { path: '/pulse', label: 'Pulse' },
+    { path: '/sessions', label: 'Sessions' },
+    { path: '/plugins', label: 'Plugins' },
+    { path: '/activity?tab=searches', label: 'Activity' },
     { path: '/playground', label: 'Playground' },
     { path: '/compare', label: 'Compare' },
     { path: '/evolution', label: 'Evolution' },
     { path: '/traces', label: 'Traces' },
-    { path: '/schedule', label: 'Schedule' },
   ],
 };
 
