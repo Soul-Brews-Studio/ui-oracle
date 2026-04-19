@@ -3,9 +3,11 @@
 Oracle UI monorepo — studio, vector, canvas.
 
 Single repo housing the three user-facing Oracle frontends, managed via
-Bun workspaces. Imported from three separate repos on 2026-04-19 as a
-skeleton. Deploys still live from the original repos until per-app
-cutover issues land.
+Bun workspaces. Imported from three separate repos on 2026-04-19.
+
+**Active deploys come from this monorepo.** The old standalone repos
+(`oracle-studio`, `vector-oracle-studio`, `ui-canvas-oracle-studio`) are
+archive/read-only — do not deploy from them.
 
 ## Layout
 
