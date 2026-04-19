@@ -31,6 +31,23 @@ export function isActivePath(location: Location, path: string): boolean {
   return location.pathname === path.split('?')[0];
 }
 
+/**
+ * Host-aware active check. If the item carries a `studio` subdomain, it's
+ * active only when the current window host matches that subdomain (ignoring
+ * path). For local items, falls back to pathname match.
+ */
+export function isActiveNav(
+  location: Location,
+  item: { path: string; studio?: string },
+): boolean {
+  if (item.studio && typeof window !== 'undefined') {
+    return window.location.hostname === item.studio
+      || window.location.hostname.endsWith('.' + item.studio);
+  }
+  if (item.studio) return false;
+  return isActivePath(location, item.path);
+}
+
 type OrderedNavItem = NavItem & { order: number };
 
 export function buildNavSet(items: MenuApiItem[]): NavSet {

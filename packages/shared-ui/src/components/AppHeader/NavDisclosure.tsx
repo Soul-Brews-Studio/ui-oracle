@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import type { CrossOriginResolver, NavItem } from './nav-types';
-import { isActivePath } from './nav-types';
+import { isActiveNav } from './nav-types';
 
 interface NavDisclosureProps {
   item: NavItem;
@@ -31,8 +31,8 @@ export function NavDisclosure({ item, crossOriginHref }: NavDisclosureProps) {
   const children = item.children ?? [];
   const parentHref = crossOriginHref(item);
   const hasRealPath = item.path && item.path !== '#';
-  const anyActive = isActivePath(location, item.path)
-    || children.some((c) => isActivePath(location, c.path));
+  const anyActive = isActiveNav(location, item)
+    || children.some((c) => isActiveNav(location, c));
 
   const labelClass = `px-2.5 py-1.5 rounded-lg text-[13px] whitespace-nowrap transition-all duration-150 ${
     anyActive
@@ -89,12 +89,12 @@ export function NavDisclosure({ item, crossOriginHref }: NavDisclosureProps) {
       {open && children.length > 0 && (
         <>
           <div className="absolute top-full left-0 right-0 h-2" />
-          <div className="absolute top-[calc(100%+4px)] left-0 bg-bg-card border border-border rounded-xl p-1 min-w-[160px] shadow-lg z-[200]">
+          <div className="absolute top-[calc(100%+4px)] left-0 bg-bg-card/95 backdrop-blur-xl border border-border rounded-xl p-1 min-w-[180px] z-[200]" style={{boxShadow: '0 10px 40px -10px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.04)'}}>
             {children.map((child) => {
               const href = crossOriginHref(child);
               const childClass = `block px-3 py-2 rounded-lg text-[13px] whitespace-nowrap transition-all duration-150 ${
-                isActivePath(location, child.path)
-                  ? 'bg-accent/10 text-accent'
+                isActiveNav(location, child)
+                  ? 'bg-accent/15 text-accent font-semibold'
                   : 'text-text-secondary hover:bg-white/5 hover:text-accent'
               }`;
               if (href) {
