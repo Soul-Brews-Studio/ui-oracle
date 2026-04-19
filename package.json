@@ -16,16 +16,20 @@
     "dev:vector": "bun --cwd apps/vector run dev",
     "dev:canvas": "bun --cwd apps/canvas run dev",
     "dev:schedule": "bun --cwd apps/schedule run dev",
+    "dev:feed": "bun --cwd apps/feed run dev",
     "build:studio": "bun --cwd apps/studio run build",
     "build:vector": "bun --cwd apps/vector run build",
     "build:canvas": "bun --cwd apps/canvas run build",
     "build:schedule": "bun --cwd apps/schedule run build",
-    "build:all": "bun run build:studio && bun run build:vector && bun run build:canvas && bun run build:schedule",
+    "build:feed": "bun --cwd apps/feed run build",
+    "build:all": "bun run build:studio && bun run build:vector && bun run build:canvas && bun run build:schedule && bun run build:feed",
     "preview:studio": "bun --cwd apps/studio run preview",
     "preview:vector": "bun --cwd apps/vector run preview",
     "preview:canvas": "bun --cwd apps/canvas run preview",
     "preview:schedule": "bun --cwd apps/schedule run preview",
-    "deploy:schedule": "bun --cwd apps/schedule run deploy"
+    "preview:feed": "bun --cwd apps/feed run preview",
+    "deploy:schedule": "bun --cwd apps/schedule run deploy",
+    "deploy:feed": "bun --cwd apps/feed run deploy"
   },
   "repository": {
     "type": "git",
