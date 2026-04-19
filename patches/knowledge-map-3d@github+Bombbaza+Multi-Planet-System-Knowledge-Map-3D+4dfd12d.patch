@@ -1,0 +1,13 @@
+diff --git a/src/KnowledgeMap.tsx b/src/KnowledgeMap.tsx
+index 0000000..0000001 100644
+--- a/src/KnowledgeMap.tsx
++++ b/src/KnowledgeMap.tsx
+@@ -238,7 +238,7 @@
+   const TYPE_COLORS_NUM = buildTypeColorNums(TYPE_COLORS);
+
+   const containerRef = useRef<HTMLDivElement>(null);
+-  const [matchIds, setMatchIds] = useState<Set<string>>(new Set());
++  const [matchIds] = useState<Set<string>>(new Set());
+   const [hoveredDoc, setHoveredDoc] = useState<MapDocument | null>(null);
+   const [focusedCluster, setFocusedCluster] = useState<string | null>(null);
+   const [typeFilter, setTypeFilter] = useState<string>('');
