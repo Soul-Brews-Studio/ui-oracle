@@ -1,0 +1,388 @@
+// Oracle API client
+//
+// Host resolution follows the maw-ui / local.drizzle.studio pattern:
+// - ?host=localhost:47778 on load → saved to localStorage, URL redirected clean
+// - No stored host → same-origin `/api` (dev via vite proxy, or studio served by a local MCP)
+// - Stored host → prepended to every request, e.g. https://mba.wg:47778/api
+//
+// See ./host.ts for the full API (setStoredHost, clearStoredHost, getRecentHosts, wsUrl…).
+import { apiUrl } from './host';
+import { cached } from '../lib/cache';
+export { apiUrl } from './host';
+
+/** Resolved base for Oracle API (e.g. `/api` or `https://mba.wg:47778/api`). */
+export const API_BASE = apiUrl('/api');
+
+// Cache TTLs — see Phase 2 of #41. Invalidation tags drive `cacheBus.invalidate(tag)`.
+const ONE_HOUR = 60 * 60 * 1000;
+const ONE_DAY = 24 * ONE_HOUR;
+const TEN_MIN = 10 * 60 * 1000;
+
+/** Strip project prefix from source_file for display (vault-indexed cross-project docs) */
+export function stripProjectPrefix(sourceFile: string, project?: string): string {
+  if (project && sourceFile.toLowerCase().startsWith(project.toLowerCase() + '/')) {
+    return sourceFile.slice(project.length + 1);
+  }
+  return sourceFile;
+}
+
+/** Check if a doc is a cross-project vault doc */
+export function isVaultDoc(sourceFile: string, project?: string): boolean {
+  return !!project && sourceFile.toLowerCase().startsWith(project.toLowerCase() + '/');
+}
+
+export interface Document {
+  id: string;
+  type: 'principle' | 'learning' | 'retro';
+  content: string;
+  source_file: string;
+  concepts: string[];
+  project?: string;                       // ghq-style path (github.com/owner/repo)
+  source?: 'fts' | 'vector' | 'hybrid';  // search source type
+  score?: number;                         // relevance score 0-1
+  distance?: number;                      // raw vector distance
+  model?: string;                         // embedding model used
+  created_at?: string;
+}
+
+export interface SearchResult {
+  results: Document[];
+  total: number;
+  query: string;
+}
+
+export interface Stats {
+  total: number;
+  by_type?: Record<string, number>;
+  by_type_files?: Record<string, number>;
+  last_indexed?: string;
+  is_stale?: boolean;
+  vault_repo?: string;
+  vector?: {
+    enabled: boolean;
+    count: number;
+    collection: string;
+  };
+  vectors?: Array<{
+    key: string;
+    model: string;
+    collection: string;
+    count: number;
+    enabled: boolean;
+  }>;
+}
+
+// Search the knowledge base
+export async function search(
+  query: string,
+  type: string = 'all',
+  limit: number = 20,
+  mode: 'hybrid' | 'fts' | 'vector' = 'hybrid',
+  model?: string
+): Promise<SearchResult & { mode?: string; model?: string; warning?: string }> {
+  const params = new URLSearchParams({ q: query, type, limit: String(limit), mode });
+  if (model) params.set('model', model);
+  const qs = params.toString();
+  return cached(`search:${qs}`, TEN_MIN, async () => {
+    const res = await fetch(`${API_BASE}/search?${qs}`);
+    return res.json();
+  }, { tag: 'search' });
+}
+
+// List/browse documents
+export async function list(type: string = 'all', limit: number = 20, offset: number = 0): Promise<{ results: Document[]; total: number }> {
+  const params = new URLSearchParams({ type, limit: String(limit), offset: String(offset) });
+  const qs = params.toString();
+  return cached(`list:${type}:${qs}`, ONE_HOUR, async () => {
+    const res = await fetch(`${API_BASE}/list?${qs}`);
+    return res.json();
+  }, { tag: `list:${type}` });
+}
+
+// Get stats
+export async function getStats(): Promise<Stats> {
+  return cached('stats', ONE_HOUR, async () => {
+    const res = await fetch(`${API_BASE}/stats`);
+    if (!res.ok) {
+      throw new Error(`Server error: ${res.status}`);
+    }
+    return res.json();
+  }, { tag: 'stats' });
+}
+
+// Get random wisdom — no cache (always return a fresh reflection).
+export async function reflect(): Promise<Document> {
+  const res = await fetch(`${API_BASE}/reflect`);
+  return res.json();
+}
+
+// Add new learning
+export async function learn(pattern: string, concepts: string[]): Promise<{ success: boolean; id?: string }> {
+  const res = await fetch(`${API_BASE}/learn`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ pattern, concepts })
+  });
+  return res.json();
+}
+
+// Get graph data
+export async function getGraph(): Promise<{ nodes: any[]; links: any[] }> {
+  const res = await fetch(`${API_BASE}/graph`);
+  return res.json();
+}
+
+// Get full file content by source_file path
+// project: ghq-style path (github.com/owner/repo) for cross-repo access
+export async function getFile(filePath: string, project?: string): Promise<{ content: string; error?: string }> {
+  const params = new URLSearchParams({ path: filePath });
+  if (project) {
+    params.append('project', project);
+  }
+  try {
+    const res = await fetch(`${API_BASE}/file?${params}`);
+    const content = await res.text();
+    if (!res.ok) {
+      // Include project info in error for debugging
+      const location = project ? `${project}/${filePath}` : filePath;
+      return { content: '', error: `File not found: ${location}` };
+    }
+    return { content };
+  } catch (e) {
+    return { content: '', error: 'Cannot connect to server' };
+  }
+}
+
+// Get document by ID
+export async function getDoc(id: string): Promise<Document & { error?: string }> {
+  return cached(`doc:${id}`, ONE_DAY, async () => {
+    const res = await fetch(`${API_BASE}/doc/${encodeURIComponent(id)}`);
+    return res.json();
+  }, { tag: 'doc' });
+}
+
+// Get similar documents (vector nearest neighbors)
+export async function getSimilar(docId: string, limit: number = 5): Promise<{ results: Document[]; docId: string }> {
+  const params = new URLSearchParams({ id: docId, limit: String(limit) });
+  const qs = params.toString();
+  return cached(`similar:${docId}:${limit}`, ONE_DAY, async () => {
+    const res = await fetch(`${API_BASE}/similar?${qs}`);
+    return res.json();
+  }, { tag: 'similar' });
+}
+
+// Get knowledge map data (2D projection)
+export interface MapDocument {
+  id: string;
+  type: string;
+  source_file: string;
+  concepts: string[];
+  chunk_ids?: string[];
+  project: string | null;
+  x: number;
+  y: number;
+  z?: number;
+  created_at: string | null;
+}
+
+// Get active Oracles
+export interface OracleIdentity {
+  oracle_name: string;
+  source: string;
+  last_seen: number;
+  actions: number;
+}
+export interface OracleProject {
+  project: string;
+  docs: number;
+  types: number;
+  last_indexed: number;
+}
+export async function getOracles(): Promise<{
+  identities: OracleIdentity[];
+  projects: OracleProject[];
+  total_projects: number;
+  total_identities: number;
+}> {
+  return cached('oracles', ONE_DAY, async () => {
+    const res = await fetch(`${API_BASE}/oracles`);
+    return res.json();
+  }, { tag: 'oracles' });
+}
+
+export async function getMap(): Promise<{ documents: MapDocument[]; total: number }> {
+  const res = await fetch(`${API_BASE}/map`);
+  return res.json();
+}
+
+export async function getMap3d(model?: string): Promise<{ documents: MapDocument[]; total: number; pca_info?: any }> {
+  const params = model ? `?model=${encodeURIComponent(model)}` : '';
+  const key = `map3d:${model ?? 'default'}`;
+  return cached(key, ONE_DAY, async () => {
+    const res = await fetch(`${API_BASE}/map3d${params}`);
+    return res.json();
+  }, { tag: 'map3d', store: 'idb' });
+}
+
+// Dashboard types
+export interface DashboardSummary {
+  documents: { total: number; by_type: Record<string, number> };
+  concepts: { total: number; top: Array<{ name: string; count: number }> };
+  activity: { searches_7d: number; learnings_7d: number };
+  health: { fts_status: string; last_indexed: string | null };
+}
+
+export interface DashboardActivity {
+  searches: Array<{ query: string; type: string; results_count: number; search_time_ms: number; created_at: string }>;
+  learnings: Array<{ document_id: string; pattern_preview: string; source: string; concepts: string[]; created_at: string }>;
+  days: number;
+}
+
+export interface DashboardGrowth {
+  period: string;
+  days: number;
+  data: Array<{ date: string; documents: number; searches: number }>;
+}
+
+// Get dashboard summary
+export async function getDashboardSummary(): Promise<DashboardSummary> {
+  const res = await fetch(`${API_BASE}/dashboard/summary`);
+  return res.json();
+}
+
+// Get dashboard activity
+export async function getDashboardActivity(days: number = 7): Promise<DashboardActivity> {
+  const params = new URLSearchParams({ days: String(days) });
+  const res = await fetch(`${API_BASE}/dashboard/activity?${params}`);
+  return res.json();
+}
+
+// Get dashboard growth
+export async function getDashboardGrowth(period: 'week' | 'month' | 'quarter' = 'week'): Promise<DashboardGrowth> {
+  const params = new URLSearchParams({ period });
+  const res = await fetch(`${API_BASE}/dashboard/growth?${params}`);
+  return res.json();
+}
+
+// ============================================================================
+// Live Feed API (Oracle activity from ~/.oracle/feed.log)
+// ============================================================================
+
+export interface FeedEvent {
+  timestamp: string;
+  oracle: string;
+  host: string;
+  event: string;
+  project: string;
+  session_id: string;
+  message: string;
+}
+
+export interface FeedResponse {
+  events: FeedEvent[];
+  total: number;
+  active_oracles: string[];
+}
+
+export async function getFeed(opts?: { limit?: number; oracle?: string; event?: string; since?: string }): Promise<FeedResponse> {
+  const params = new URLSearchParams();
+  if (opts?.limit) params.set('limit', String(opts.limit));
+  if (opts?.oracle) params.set('oracle', opts.oracle);
+  if (opts?.event) params.set('event', opts.event);
+  if (opts?.since) params.set('since', opts.since);
+  const res = await fetch(`${API_BASE}/feed?${params}`);
+  return res.json();
+}
+
+// ============================================================================
+// WASM Plugins API
+// ============================================================================
+
+export interface PluginInfo {
+  name: string;
+  file: string;
+  size: number;
+  modified: string;
+  version?: string;
+  description?: string;
+}
+
+export async function getPlugins(): Promise<{ plugins: PluginInfo[] }> {
+  const res = await fetch(`${API_BASE}/plugins`);
+  return res.json();
+}
+
+export async function loadPlugin(name: string): Promise<WebAssembly.Instance> {
+  const res = await fetch(`${API_BASE}/plugins/${name}`);
+  const bytes = await res.arrayBuffer();
+  const mod = await WebAssembly.compile(bytes);
+  const inst = await WebAssembly.instantiate(mod);
+  return inst;
+}
+
+// ============================================================================
+// Auth API
+// ============================================================================
+
+export interface AuthStatus {
+  authenticated: boolean;
+  authEnabled: boolean;
+  hasPassword: boolean;
+  localBypass: boolean;
+  isLocal: boolean;
+}
+
+export interface Settings {
+  authEnabled: boolean;
+  localBypass: boolean;
+  hasPassword: boolean;
+  vaultRepo?: string | null;
+}
+
+// Get auth status
+export async function getAuthStatus(): Promise<AuthStatus> {
+  const res = await fetch(`${API_BASE}/auth/status`);
+  return res.json();
+}
+
+// Login
+export async function login(password: string): Promise<{ success: boolean; error?: string }> {
+  const res = await fetch(`${API_BASE}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password })
+  });
+  return res.json();
+}
+
+// Logout
+export async function logout(): Promise<{ success: boolean }> {
+  const res = await fetch(`${API_BASE}/auth/logout`, {
+    method: 'POST'
+  });
+  return res.json();
+}
+
+// Get settings
+export async function getSettings(): Promise<Settings> {
+  const res = await fetch(`${API_BASE}/settings`);
+  return res.json();
+}
+
+// Update settings
+export interface UpdateSettingsParams {
+  currentPassword?: string;
+  newPassword?: string;
+  removePassword?: boolean;
+  authEnabled?: boolean;
+  localBypass?: boolean;
+}
+
+export async function updateSettings(params: UpdateSettingsParams): Promise<Settings & { success?: boolean; error?: string }> {
+  const res = await fetch(`${API_BASE}/settings`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(params)
+  });
+  return res.json();
+}

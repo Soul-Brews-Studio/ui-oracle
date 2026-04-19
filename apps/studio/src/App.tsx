@@ -1,0 +1,120 @@
+import { useEffect, useState } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { Header } from './components/Header';
+
+import { Overview } from './pages/Overview';
+import { Feed } from './pages/Feed';
+import { DocDetail } from './pages/DocDetail';
+import { Search } from './pages/Search';
+import { Handoff } from './pages/Handoff';
+import { Activity } from './pages/Activity';
+import { Forum } from './pages/Forum';
+import { Evolution } from './pages/Evolution';
+import { Traces } from './pages/Traces';
+import { Superseded } from './pages/Superseded';
+import { Login } from './pages/Login';
+import { Settings } from './pages/Settings';
+import { Playground } from './pages/Playground';
+import { Compare } from './pages/Compare';
+import { CommandPalette } from './components/CommandPalette';
+import { BackendGate } from './components/BackendGate';
+import { Map } from './pages/Map';
+import { Schedule } from './pages/Schedule';
+import { Pulse } from './pages/Pulse';
+import { Plugins } from './pages/Plugins';
+import { Sessions } from './pages/Sessions';
+import { Canvas } from './pages/Canvas';
+import { Planets } from './pages/Planets';
+import { MenuEditor } from './pages/MenuEditor';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { getStats } from './api/oracle';
+import { setVaultRepo } from './utils/docDisplay';
+
+// Protected route wrapper
+function RequireAuth({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, authEnabled, isLoading } = useAuth();
+  const location = useLocation();
+
+  if (isLoading) {
+    return <div style={{ padding: 48, textAlign: 'center', color: '#888' }}>Loading...</div>;
+  }
+
+  if (authEnabled && !isAuthenticated) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  return <>{children}</>;
+}
+
+function AppContent() {
+  const location = useLocation();
+  const isLoginPage = location.pathname === '/login';
+  const [showCmdK, setShowCmdK] = useState(false);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setShowCmdK(s => !s);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
+
+  return (
+    <>
+      {!isLoginPage && <Header />}
+      {showCmdK && <CommandPalette onClose={() => setShowCmdK(false)} />}
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/" element={<RequireAuth><Overview /></RequireAuth>} />
+        <Route path="/feed" element={<RequireAuth><Feed /></RequireAuth>} />
+        <Route path="/doc/:id" element={<RequireAuth><DocDetail /></RequireAuth>} />
+        <Route path="/search" element={<RequireAuth><Search /></RequireAuth>} />
+        <Route path="/playground" element={<RequireAuth><Playground /></RequireAuth>} />
+        <Route path="/compare" element={<RequireAuth><Compare /></RequireAuth>} />
+        <Route path="/map" element={<RequireAuth><Map /></RequireAuth>} />
+        <Route path="/graph" element={<Navigate to="/map" replace />} />
+        <Route path="/graph3d" element={<Navigate to="/map" replace />} />
+        <Route path="/handoff" element={<RequireAuth><Handoff /></RequireAuth>} />
+        <Route path="/activity" element={<RequireAuth><Activity /></RequireAuth>} />
+        <Route path="/forum" element={<RequireAuth><Forum /></RequireAuth>} />
+        <Route path="/evolution" element={<RequireAuth><Evolution /></RequireAuth>} />
+        <Route path="/traces" element={<RequireAuth><Traces /></RequireAuth>} />
+        <Route path="/traces/:id" element={<RequireAuth><Traces /></RequireAuth>} />
+        <Route path="/superseded" element={<RequireAuth><Superseded /></RequireAuth>} />
+        <Route path="/pulse" element={<RequireAuth><Pulse /></RequireAuth>} />
+        <Route path="/sessions" element={<RequireAuth><Sessions /></RequireAuth>} />
+        <Route path="/sessions/:id" element={<RequireAuth><Sessions /></RequireAuth>} />
+        <Route path="/canvas" element={<RequireAuth><Canvas /></RequireAuth>} />
+        <Route path="/planets" element={<RequireAuth><Planets /></RequireAuth>} />
+        <Route path="/plugins" element={<RequireAuth><Plugins /></RequireAuth>} />
+        <Route path="/schedule" element={<RequireAuth><Schedule /></RequireAuth>} />
+        <Route path="/settings" element={<RequireAuth><Settings /></RequireAuth>} />
+        <Route path="/menu" element={<RequireAuth><MenuEditor /></RequireAuth>} />
+      </Routes>
+
+    </>
+  );
+}
+
+function App() {
+  useEffect(() => {
+    getStats().then(stats => {
+      if (stats.vault_repo) setVaultRepo(stats.vault_repo);
+    }).catch(() => {});
+  }, []);
+
+  return (
+    <BrowserRouter>
+      <BackendGate>
+        <AuthProvider>
+          <AppContent />
+        </AuthProvider>
+      </BackendGate>
+    </BrowserRouter>
+  );
+}
+
+export default App;
