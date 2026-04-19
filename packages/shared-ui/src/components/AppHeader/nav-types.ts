@@ -1,6 +1,11 @@
 import type { Location } from 'react-router-dom';
 
-export type NavItem = { path: string; label: string; studio?: string };
+export type NavItem = {
+  path: string;
+  label: string;
+  studio?: string;
+  query?: Record<string, string>;
+};
 
 export type NavSet = { main: NavItem[]; tools: NavItem[] };
 
@@ -10,6 +15,7 @@ export type MenuApiItem = {
   group?: string;
   order?: number;
   studio?: string;
+  query?: Record<string, string>;
 };
 
 /**
@@ -36,13 +42,24 @@ export function buildNavSet(items: MenuApiItem[]): NavSet {
       order: typeof item.order === 'number' ? item.order : 999,
     };
     if (typeof item.studio === 'string' && item.studio) entry.studio = item.studio;
+    if (item.query && typeof item.query === 'object') {
+      const clean: Record<string, string> = {};
+      for (const [k, v] of Object.entries(item.query)) {
+        if (typeof k === 'string' && typeof v === 'string') clean[k] = v;
+      }
+      if (Object.keys(clean).length > 0) entry.query = clean;
+    }
     bucket.push(entry);
   }
   const byOrder = (a: { order: number }, b: { order: number }) => a.order - b.order;
   main.sort(byOrder);
   tools.sort(byOrder);
-  const strip = ({ path, label, studio }: NavItem & { order: number }): NavItem =>
-    studio ? { path, label, studio } : { path, label };
+  const strip = ({ path, label, studio, query }: NavItem & { order: number }): NavItem => {
+    const out: NavItem = { path, label };
+    if (studio) out.studio = studio;
+    if (query) out.query = query;
+    return out;
+  };
   const mainItems = main.map(strip);
   return {
     main: mainItems.some((n) => n.path === '/' && !n.studio)
