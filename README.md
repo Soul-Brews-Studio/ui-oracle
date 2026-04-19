@@ -69,12 +69,14 @@ bun run preview:canvas
 
 ## Deploy
 
-**Not wired up at the monorepo level yet.** Deploys still run from the
-three original repos until cutover issues land. See open issues labeled
-`cutover` for the migration plan.
+```bash
+bun run deploy:studio   # → studio.buildwithoracle.com
+bun run deploy:vector   # → vector.buildwithoracle.com
+bun run deploy:canvas   # → canvas.buildwithoracle.com
+```
 
-Each app keeps its original `wrangler.json`; once cutover lands,
-deploys will run via `bun --cwd apps/<name> run deploy`.
+Each app keeps its own `wrangler.json`; root scripts proxy to
+`bun --cwd apps/<name> run deploy`.
 
 ## Status
 
