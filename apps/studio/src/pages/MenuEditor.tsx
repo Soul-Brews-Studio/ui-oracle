@@ -102,6 +102,27 @@ export function MenuEditor() {
     return set;
   }, [items]);
 
+  // Parent picker options = items whose path is '#' (menu-parent containers like Tools, Canvas).
+  const parentContainers = useMemo(
+    () => items.filter((i) => i.path === '#').sort((a, b) => a.label.localeCompare(b.label)),
+    [items],
+  );
+
+  function parentOptionsFor(id: number): MenuItem[] {
+    const descendants = new Set<number>([id]);
+    let grew = true;
+    while (grew) {
+      grew = false;
+      for (const it of items) {
+        if (it.parentId != null && descendants.has(it.parentId) && !descendants.has(it.id)) {
+          descendants.add(it.id);
+          grew = true;
+        }
+      }
+    }
+    return parentContainers.filter((p) => !descendants.has(p.id));
+  }
+
   async function handleDragEnd(parentId: number | null, e: DragEndEvent) {
     const { active, over } = e;
     if (!over || active.id === over.id) return;
@@ -142,6 +163,7 @@ export function MenuEditor() {
                   item={it}
                   depth={depth}
                   hasChildren={hasChildren.has(it.id)}
+                  parentOptions={parentOptionsFor(it.id)}
                   onPatch={patchItem}
                   onEdit={setEditing}
                   onReset={resetItem}
