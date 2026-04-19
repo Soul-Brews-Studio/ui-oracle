@@ -1,6 +1,3 @@
-// Barrel for the client cache module.
-export { cached } from './cached';
-export { cacheBus } from './bus';
-export { localStore } from './local-store';
-export { idbStore } from './idb-store';
-export type { CacheEntry, CachePolicy, InvalidationEvent, CacheStore } from './types';
+// Re-export the shared client cache from @ui-oracle/shared-ui.
+export { cached, cacheBus, localStore, idbStore } from '@ui-oracle/shared-ui';
+export type { CacheEntry, CachePolicy, InvalidationEvent, CacheStore } from '@ui-oracle/shared-ui';

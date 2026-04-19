@@ -13,6 +13,16 @@ export { apiUrl } from './host';
 /** Resolved base for Oracle API (e.g. `/api` or `https://mba.wg:47778/api`). */
 export const API_BASE = apiUrl('/api');
 
+/** Ping the backend — used by the header status chip. */
+export async function ping(): Promise<boolean> {
+  try {
+    const res = await fetch(`${API_BASE}/stats`, { signal: AbortSignal.timeout(2000) });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
 // Cache TTLs — see Phase 2 of #41. Invalidation tags drive `cacheBus.invalidate(tag)`.
 const ONE_HOUR = 60 * 60 * 1000;
 const ONE_DAY = 24 * ONE_HOUR;
