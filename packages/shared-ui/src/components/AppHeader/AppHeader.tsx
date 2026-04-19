@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { hostLabel, isVectorHost } from '../../host';
+import { hostLabel, isStudioHost, isVectorHost } from '../../host';
 import { Brand } from './Brand';
 import { VersionChip } from './VersionChip';
 import { BackendChip } from './BackendChip';
@@ -61,6 +61,12 @@ function defaultCrossOriginHref(item: NavItem): string | null {
     if (!isPlayground) {
       return `${STUDIO_ORIGIN}${item.path}?host=${encodeURIComponent(currentHost)}`;
     }
+    return null;
+  }
+  // Any other non-studio subdomain (canvas, feed, schedule, …): local items
+  // don't exist here — bounce them to studio.
+  if (!isStudioHost()) {
+    return `${STUDIO_ORIGIN}${item.path}?host=${encodeURIComponent(currentHost)}`;
   }
   return null;
 }
