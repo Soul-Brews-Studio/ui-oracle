@@ -32,7 +32,16 @@ export function useMenu(fallback: NavSet): { nav: NavSet; loaded: boolean } {
         );
         if (cancelled) return;
         const items: MenuApiItem[] = Array.isArray(data?.items) ? data.items : [];
-        if (items.length > 0) setNav(buildNavSet(items));
+        if (items.length > 0) {
+          const built = buildNavSet(items);
+          // Keep fallback when backend returns too few main items — common when
+          // the DB seed only has tools-group rows. The fallback is the curated
+          // menu; a sparse DB response shouldn't erase it.
+          const mainCount = built.main.filter((n) => !(n.path === '/' && n.label === 'Overview' && !n.studio)).length;
+          if (mainCount >= fallback.main.length - 1) {
+            setNav(built);
+          }
+        }
       } catch {
         // Backend unreachable — keep fallback nav.
       } finally {
