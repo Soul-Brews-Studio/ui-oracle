@@ -86,7 +86,7 @@ export function AppHeader({
         borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
       }}
     >
-      <div className="flex justify-between items-center gap-4 px-4 py-2 max-w-[1400px] mx-auto">
+      <div className="flex justify-between items-center gap-4 px-6 py-3 max-w-[1400px] mx-auto">
         <Brand label={brandLabel}>
           <VersionChip backendVersion={backendVersion} />
         </Brand>
@@ -99,7 +99,7 @@ export function AppHeader({
       </div>
 
       <nav
-        className={`flex items-center gap-0.5 px-4 pb-2 flex-wrap max-w-[1400px] mx-auto transition-opacity duration-150 ${
+        className={`flex items-center gap-1 px-6 pb-3 flex-wrap max-w-[1400px] mx-auto transition-opacity duration-150 ${
           loaded ? 'opacity-100' : 'opacity-0'
         }`}
       >
