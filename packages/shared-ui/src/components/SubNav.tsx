@@ -24,7 +24,7 @@ export function SubNav({ items, enabled = true }: Props) {
         borderBottom: '1px solid rgba(255, 255, 255, 0.04)',
       }}
     >
-      <nav className="flex items-center gap-1 px-4 py-1.5 max-w-[1400px] mx-auto overflow-x-auto">
+      <nav className="flex items-center gap-1.5 px-6 py-2 max-w-[1400px] mx-auto overflow-x-auto">
         {items.map((it) => {
           const active = location.pathname === it.path;
           return (
