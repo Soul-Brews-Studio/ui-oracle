@@ -1,4 +1,4 @@
-export { AppHeader, defaultCrossOriginHref } from './AppHeader';
+export { AppHeader, defaultCrossOriginHref, isVectorPath } from './AppHeader';
 export { Brand } from './Brand';
 export { VersionChip } from './VersionChip';
 export { BackendChip } from './BackendChip';

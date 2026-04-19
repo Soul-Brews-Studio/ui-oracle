@@ -1,32 +1,8 @@
 import { Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
-import { AppHeader, hostLabel, isStudioHost, type CrossOriginResolver, type NavItem } from '@ui-oracle/shared-ui';
+import { AppHeader } from '@ui-oracle/shared-ui';
 import { useAuth } from '../contexts/AuthContext';
 import { API_BASE, ping } from '../api/oracle';
-
-const VECTOR_ORIGIN = 'https://vector.buildwithoracle.com';
-
-/** Studio bundle navigates cross-origin to vector.* for playground/compare paths. */
-function isVectorPath(path: string): boolean {
-  const clean = path.split('?')[0];
-  return (
-    clean === '/playground' ||
-    clean.startsWith('/playground/') ||
-    clean === '/compare' ||
-    clean.startsWith('/compare/')
-  );
-}
-
-const studioCrossOriginHref: CrossOriginResolver = (item: NavItem) => {
-  const currentHost = hostLabel().replace(' (default)', '');
-  if (item.studio) {
-    return `https://${item.studio}${item.path}?host=${encodeURIComponent(currentHost)}`;
-  }
-  if (isStudioHost() && isVectorPath(item.path)) {
-    return `${VECTOR_ORIGIN}${item.path}?host=${encodeURIComponent(currentHost)}`;
-  }
-  return null;
-};
 
 /** Studio-specific extras: session duration, search/learning counters, settings link, logout. */
 function StudioExtras() {
@@ -95,13 +71,14 @@ function StudioExtras() {
 
 /**
  * Studio bundle header — composes the shared AppHeader with studio-specific
- * extras (session stats, settings, auth logout) and studio-to-vector cross-origin rules.
+ * extras (session stats, settings, auth logout). Cross-origin routing
+ * (including the studio→vector bounce for playground/compare) lives in the
+ * unified resolver in shared-ui.
  */
 export function Header() {
   return (
     <AppHeader
       ping={ping}
-      crossOriginHref={studioCrossOriginHref}
       topRowExtras={<StudioExtras />}
     />
   );
