@@ -1,3 +1,9 @@
 {
-  "mainOrder": ["Feed", "Memory", "Overview", "Search", "Canvas"]
+  "mainOrder": ["Feed", "Memory", "Overview", "Search", "Canvas"],
+  "subnav": [
+    { "path": "/", "label": "All", "icon": "📰" },
+    { "path": "/?type=principle", "label": "Principles", "icon": "📜" },
+    { "path": "/?type=learning", "label": "Learnings", "icon": "💡" },
+    { "path": "/?type=retro", "label": "Retros", "icon": "🔁" }
+  ]
 }

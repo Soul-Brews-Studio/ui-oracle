@@ -1,3 +1,14 @@
 {
-  "mainOrder": ["Canvas", "Overview", "Search", "Memory", "Feed"]
+  "mainOrder": ["Canvas", "Overview", "Search", "Memory", "Feed"],
+  "subnav": [
+    { "path": "/?plugin=map", "label": "Map", "icon": "🗺️" },
+    { "path": "/?plugin=planets", "label": "Planets", "icon": "🪐" },
+    { "path": "/?plugin=wave", "label": "Wave", "icon": "🌊" },
+    { "path": "/?plugin=cube", "label": "Cube", "icon": "🧊" },
+    { "path": "/?plugin=torus", "label": "Torus", "icon": "🍩" },
+    { "path": "/?plugin=galaxy", "label": "Galaxy", "icon": "🌌" },
+    { "path": "/?plugin=solar", "label": "Solar", "icon": "☀️" },
+    { "path": "/?plugin=graph3d", "label": "Graph 3D", "icon": "📊" },
+    { "path": "/?plugin=map3d", "label": "Map 3D", "icon": "🌍" }
+  ]
 }
