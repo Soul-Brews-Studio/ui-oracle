@@ -37,13 +37,13 @@ export function MainNav({ items, crossOriginHref }: MainNavProps) {
         }`;
         if (href) {
           return (
-            <a key={href} href={href} className={cls}>
+            <a key={href} href={href} className={cls} aria-current={active ? 'page' : undefined}>
               {item.label}
             </a>
           );
         }
         return (
-          <Link key={item.path} to={item.path} className={cls}>
+          <Link key={item.path} to={item.path} className={cls} aria-current={active ? 'page' : undefined}>
             {item.label}
           </Link>
         );

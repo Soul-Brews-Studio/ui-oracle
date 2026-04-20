@@ -31,7 +31,8 @@ export function NavDisclosure({ item, crossOriginHref }: NavDisclosureProps) {
   const children = item.children ?? [];
   const parentHref = crossOriginHref(item);
   const hasRealPath = item.path && item.path !== '#';
-  const anyActive = isActiveNav(location, item)
+  const parentActive = isActiveNav(location, item);
+  const anyActive = parentActive
     || children.some((c) => isActiveNav(location, c));
 
   const labelClass = `px-2.5 py-1.5 rounded-lg text-[13px] whitespace-nowrap transition-all duration-150 ${
@@ -54,13 +55,13 @@ export function NavDisclosure({ item, crossOriginHref }: NavDisclosureProps) {
     }
     if (parentHref) {
       return (
-        <a href={parentHref} className={labelClass}>
+        <a href={parentHref} className={labelClass} aria-current={parentActive ? 'page' : undefined}>
           {item.label} <span aria-hidden="true">▸</span>
         </a>
       );
     }
     return (
-      <Link to={item.path} className={labelClass}>
+      <Link to={item.path} className={labelClass} aria-current={parentActive ? 'page' : undefined}>
         {item.label} <span aria-hidden="true">▸</span>
       </Link>
     );
@@ -100,8 +101,9 @@ export function NavDisclosure({ item, crossOriginHref }: NavDisclosureProps) {
           >
             {children.map((child) => {
               const href = crossOriginHref(child);
+              const childActive = isActiveNav(location, child);
               const childClass = `block px-3 py-2 rounded-lg text-[13px] whitespace-nowrap transition-all duration-150 ${
-                isActiveNav(location, child)
+                childActive
                   ? 'bg-accent/15 text-accent font-semibold'
                   : 'text-text-secondary hover:bg-white/5 hover:text-accent'
               }`;
@@ -113,6 +115,7 @@ export function NavDisclosure({ item, crossOriginHref }: NavDisclosureProps) {
                     className={childClass}
                     onClick={() => setOpen(false)}
                     role="menuitem"
+                    aria-current={childActive ? 'page' : undefined}
                   >
                     {child.label}
                   </a>
@@ -125,6 +128,7 @@ export function NavDisclosure({ item, crossOriginHref }: NavDisclosureProps) {
                   className={childClass}
                   onClick={() => setOpen(false)}
                   role="menuitem"
+                  aria-current={childActive ? 'page' : undefined}
                 >
                   {child.label}
                 </Link>
