@@ -45,24 +45,38 @@ export function Forum() {
 
   const threadId = searchParams.get('thread');
   const showNew = searchParams.get('new') === 'true';
+  const statusFilter = searchParams.get('status');
 
-  useEffect(() => { loadThreads(); }, []);
+  // "open" is a UI alias for "not closed"; backend has no 'open' status.
+  const backendStatus = statusFilter && statusFilter !== 'open' ? statusFilter : null;
+  const visibleThreads = statusFilter === 'open'
+    ? threads.filter(t => t.status !== 'closed')
+    : threads;
+
+  useEffect(() => { loadThreads(); }, [statusFilter]);
 
   useEffect(() => {
     if (threadId) selectThread(parseInt(threadId, 10));
-    else if (threads.length > 0 && !showNew) setSearchParams({ thread: threads[0].id.toString() });
+    else if (visibleThreads.length > 0 && !showNew) setThreadParam(visibleThreads[0].id);
     else setSelected(null);
-  }, [threadId, threads]);
+  }, [threadId, threads, statusFilter]);
 
   async function loadThreads() {
-    const data = await (await fetch(`${API_BASE}/threads`)).json();
+    const qs = backendStatus ? `?status=${encodeURIComponent(backendStatus)}` : '';
+    const data = await (await fetch(`${API_BASE}/threads${qs}`)).json();
     setThreads(data.threads);
+  }
+
+  function setThreadParam(id: number) {
+    const next: Record<string, string> = { thread: id.toString() };
+    if (statusFilter) next.status = statusFilter;
+    setSearchParams(next);
   }
 
   async function selectThread(id: number) {
     const data = await (await fetch(`${API_BASE}/thread/${id}`)).json();
     setSelected(data);
-    setSearchParams({ thread: id.toString() });
+    setThreadParam(id);
   }
 
   async function handleSend(e: React.FormEvent) {
@@ -109,10 +123,10 @@ export function Forum() {
         </div>
 
         <div className="flex-1 overflow-y-auto space-y-1">
-          {threads.map(t => (
+          {visibleThreads.map(t => (
             <div
               key={t.id}
-              onClick={() => setSearchParams({ thread: t.id.toString() })}
+              onClick={() => setThreadParam(t.id)}
               className={`p-3 rounded-xl cursor-pointer transition-all duration-150 border ${
                 selected?.thread.id === t.id
                   ? 'bg-accent/10 border-accent/30'
@@ -126,7 +140,7 @@ export function Forum() {
               </div>
             </div>
           ))}
-          {threads.length === 0 && <div className="text-center text-text-muted py-8 text-sm">No threads yet</div>}
+          {visibleThreads.length === 0 && <div className="text-center text-text-muted py-8 text-sm">No threads yet</div>}
         </div>
       </div>
 
