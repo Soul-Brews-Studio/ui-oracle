@@ -1,4 +1,11 @@
 {
   "mainOrder": ["Overview", "Search", "Memory", "Canvas", "Feed"],
-  "toolsOrder": ["Schedule", "Pulse", "Sessions", "Plugins", "Vector Playground", "Compare", "Evolution"]
+  "toolsOrder": ["Schedule", "Pulse", "Sessions", "Plugins", "Vector Playground", "Compare", "Evolution"],
+  "subnav": [
+    { "path": "/", "label": "Overview", "icon": "◉" },
+    { "path": "/search", "label": "Search", "icon": "🔍" },
+    { "path": "/activity", "label": "Activity", "icon": "📊" },
+    { "path": "/traces", "label": "Traces", "icon": "🔗" },
+    { "path": "/pulse", "label": "Pulse", "icon": "💓" }
+  ]
 }

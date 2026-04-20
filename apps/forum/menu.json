@@ -1,3 +1,9 @@
 {
-  "mainOrder": ["Memory", "Overview", "Search", "Canvas", "Feed"]
+  "mainOrder": ["Memory", "Overview", "Search", "Canvas", "Feed"],
+  "subnav": [
+    { "path": "/", "label": "All Threads", "icon": "💬" },
+    { "path": "/?status=open", "label": "Open", "icon": "🟢" },
+    { "path": "/?status=answered", "label": "Answered", "icon": "✅" },
+    { "path": "/?status=closed", "label": "Closed", "icon": "🔒" }
+  ]
 }
