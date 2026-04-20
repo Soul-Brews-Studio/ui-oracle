@@ -112,7 +112,10 @@ export function buildNavSet(items: MenuApiItem[]): NavSet {
 
   const mainItems = main.map(strip);
   return {
-    main: mainItems.some((n) => n.path === '/' && !n.studio)
+    // Prepend a default Overview only when NO Overview exists. Prior check also
+    // required `!n.studio` which caused duplicate Overview when gist items carry
+    // `studio: 'studio.buildwithoracle.com'` — match by label only.
+    main: mainItems.some((n) => n.label === 'Overview')
       ? mainItems
       : [{ path: '/', label: 'Overview' }, ...mainItems],
     tools: tools.map(strip),

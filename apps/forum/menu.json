@@ -1,5 +1,4 @@
 {
-  "mainOrder": ["Memory", "Overview", "Search", "Canvas", "Feed"],
   "subnav": [
     { "path": "/", "label": "All Threads", "icon": "💬" },
     { "path": "/?status=open", "label": "Open", "icon": "🟢" },

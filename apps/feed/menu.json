@@ -1,5 +1,4 @@
 {
-  "mainOrder": ["Feed", "Memory", "Overview", "Search", "Canvas"],
   "subnav": [
     { "path": "/", "label": "All", "icon": "📰" },
     { "path": "/?type=principle", "label": "Principles", "icon": "📜" },
