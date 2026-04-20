@@ -22,8 +22,9 @@
     "noUnusedParameters": true,
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true
+    "noUncheckedSideEffectImports": true,
+    "resolveJsonModule": true
   },
-  "include": ["src"],
+  "include": ["src", "menu.json"],
   "exclude": ["src/**/__tests__/**", "node_modules", "**/node_modules/**"]
 }

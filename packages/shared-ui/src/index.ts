@@ -15,6 +15,7 @@ export {
   useBackendVersion,
   buildNavSet,
   isActivePath,
+  reorderNavSet,
 } from './components/AppHeader';
 export type {
   BackendStatus,
@@ -22,6 +23,7 @@ export type {
   NavSet,
   MenuApiItem,
   CrossOriginResolver,
+  MenuConfig,
 } from './components/AppHeader';
 
 // Layout primitives

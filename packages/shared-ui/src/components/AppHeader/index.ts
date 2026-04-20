@@ -10,3 +10,5 @@ export { ToolsDropdown } from './ToolsDropdown';
 export { useMenu, useBackendVersion } from './use-menu';
 export type { NavItem, NavSet, MenuApiItem, CrossOriginResolver } from './nav-types';
 export { buildNavSet, isActivePath } from './nav-types';
+export { reorderNavSet } from './reorder';
+export type { MenuConfig } from './reorder';

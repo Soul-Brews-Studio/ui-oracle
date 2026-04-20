@@ -1,0 +1,4 @@
+{
+  "mainOrder": ["Overview", "Search", "Memory", "Canvas", "Feed"],
+  "toolsOrder": ["Schedule", "Pulse", "Sessions", "Plugins", "Vector Playground", "Compare", "Evolution"]
+}
