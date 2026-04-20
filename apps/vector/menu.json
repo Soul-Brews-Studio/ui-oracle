@@ -1,3 +1,7 @@
 {
-  "toolsOrder": ["Vector Playground", "Compare", "Schedule", "Pulse", "Sessions", "Plugins", "Evolution"]
+  "toolsOrder": ["Vector Playground", "Compare", "Schedule", "Pulse", "Sessions", "Plugins", "Evolution"],
+  "subnav": [
+    { "path": "/", "label": "Vector Playground", "icon": "🔍" },
+    { "path": "/compare", "label": "Compare", "icon": "⚖️" }
+  ]
 }
