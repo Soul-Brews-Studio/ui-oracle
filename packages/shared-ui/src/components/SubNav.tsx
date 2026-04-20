@@ -1,4 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
+import { isSubNavItemActive } from './SubNav-active';
 
 export type SubNavItem = { path: string; label: string; icon?: string };
 
@@ -16,6 +17,9 @@ export function SubNav({ items, enabled = true }: Props) {
   const location = useLocation();
   if (!enabled) return null;
 
+  const currentSearch =
+    typeof window !== 'undefined' ? window.location.search : '';
+
   return (
     <div
       className="sticky top-[92px] z-40 backdrop-blur-xl"
@@ -26,7 +30,7 @@ export function SubNav({ items, enabled = true }: Props) {
     >
       <nav className="flex items-center gap-1.5 px-6 py-2 max-w-[1400px] mx-auto overflow-x-auto">
         {items.map((it) => {
-          const active = location.pathname === it.path;
+          const active = isSubNavItemActive(it.path, location.pathname, currentSearch);
           return (
             <Link
               key={it.path}
