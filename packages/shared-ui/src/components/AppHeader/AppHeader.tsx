@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import { hostLabel, isStudioHost, isVectorHost } from '../../host';
 import { Brand } from './Brand';
 import { VersionChip } from './VersionChip';
@@ -8,6 +8,7 @@ import { MainNav } from './MainNav';
 import { ToolsDropdown } from './ToolsDropdown';
 import { useBackendVersion, useMenu } from './use-menu';
 import type { CrossOriginResolver, NavItem, NavSet } from './nav-types';
+import { reorderNavSet, type MenuConfig } from './reorder';
 
 const DEFAULT_NAV: NavSet = {
   main: [
@@ -96,6 +97,8 @@ interface AppHeaderProps {
   crossOriginHref?: CrossOriginResolver;
   /** Hide the "Tools ▾" dropdown. */
   hideToolsDropdown?: boolean;
+  /** Per-app label ordering for main/tools. Unknown labels are ignored. */
+  menuConfig?: MenuConfig;
 }
 
 // Unified cross-origin resolver — preserves BOTH `item.path` and `item.query`
@@ -144,8 +147,10 @@ export function AppHeader({
   fallbackNav = DEFAULT_NAV,
   crossOriginHref = defaultCrossOriginHref,
   hideToolsDropdown = false,
+  menuConfig,
 }: AppHeaderProps) {
   const { nav, loaded } = useMenu(fallbackNav);
+  const reorderedNav = useMemo(() => reorderNavSet(nav, menuConfig), [nav, menuConfig]);
   const backendVersion = useBackendVersion();
 
   return (
@@ -182,11 +187,11 @@ export function AppHeader({
           loaded ? 'opacity-100' : 'opacity-0'
         }`}
       >
-        <MainNav items={nav.main} crossOriginHref={crossOriginHref} />
-        {!hideToolsDropdown && nav.tools.length > 0 && (
+        <MainNav items={reorderedNav.main} crossOriginHref={crossOriginHref} />
+        {!hideToolsDropdown && reorderedNav.tools.length > 0 && (
           <>
             <span className="w-px h-4 bg-border mx-2" />
-            <ToolsDropdown items={nav.tools} crossOriginHref={crossOriginHref} />
+            <ToolsDropdown items={reorderedNav.tools} crossOriginHref={crossOriginHref} />
           </>
         )}
       </nav>

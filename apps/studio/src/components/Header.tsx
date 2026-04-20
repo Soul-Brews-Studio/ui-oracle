@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { AppHeader } from '@ui-oracle/shared-ui';
 import { useAuth } from '../contexts/AuthContext';
 import { API_BASE, ping } from '../api/oracle';
+import menuConfig from '../../menu.json';
 
 /** Studio-specific extras: session duration, search/learning counters, settings link, logout. */
 function StudioExtras() {
@@ -80,6 +81,7 @@ export function Header() {
     <AppHeader
       ping={ping}
       topRowExtras={<StudioExtras />}
+      menuConfig={menuConfig}
     />
   );
 }
