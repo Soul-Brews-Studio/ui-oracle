@@ -4,6 +4,7 @@
 export {
   AppHeader,
   defaultCrossOriginHref,
+  isVectorPath,
   Brand,
   VersionChip,
   BackendChip,

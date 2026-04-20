@@ -32,6 +32,7 @@ const DEFAULT_NAV: NavSet = {
 };
 
 const STUDIO_ORIGIN = 'https://studio.buildwithoracle.com';
+const VECTOR_ORIGIN = 'https://vector.buildwithoracle.com';
 
 function appendQuery(base: string, query: Record<string, string> | undefined): string {
   if (!query) return base;
@@ -42,6 +43,23 @@ function appendQuery(base: string, query: Record<string, string> | undefined): s
     .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
     .join('&');
   return `${base}${sep}${qs}`;
+}
+
+// Studio → vector for the playground/compare paths. Kept as a small helper so
+// app overrides can reuse the same detection logic.
+export function isVectorPath(path: string): boolean {
+  const clean = path.split('?')[0];
+  return (
+    clean === '/playground' ||
+    clean.startsWith('/playground/') ||
+    clean === '/compare' ||
+    clean.startsWith('/compare/')
+  );
+}
+
+function buildHref(origin: string, item: NavItem, currentHost: string): string {
+  const withHost = appendQuery(`${origin}${item.path}`, { host: currentHost });
+  return appendQuery(withHost, item.query);
 }
 
 interface AppHeaderProps {
@@ -59,28 +77,37 @@ interface AppHeaderProps {
   hideToolsDropdown?: boolean;
 }
 
+// Unified cross-origin resolver — preserves BOTH `item.path` and `item.query`
+// on every bounce. Previously the studio and shared-ui variants disagreed
+// (one dropped query, the other forced '/'), so an item with both path and
+// query (e.g. Canvas plugin=galaxy at /) lost data in one direction or the
+// other. Every branch here routes through `buildHref`, which adds ?host=
+// first and then merges `item.query`.
 function defaultCrossOriginHref(item: NavItem): string | null {
   const currentHost = hostLabel().replace(' (default)', '');
+
   if (item.studio) {
-    // `studio` field means "separate app on its own subdomain" — land at
-    // root of that subdomain. `query` merges additional params for deep-links
-    // (e.g. canvas plugin=map).
-    const base = `https://${item.studio}/?host=${encodeURIComponent(currentHost)}`;
-    return appendQuery(base, item.query);
+    if (typeof window !== 'undefined' && window.location.hostname === item.studio) {
+      return null;
+    }
+    return buildHref(`https://${item.studio}`, item, currentHost);
   }
+
+  if (isStudioHost() && isVectorPath(item.path)) {
+    return buildHref(VECTOR_ORIGIN, item, currentHost);
+  }
+
   if (isVectorHost()) {
     const clean = item.path.split('?')[0];
     const isPlayground = clean === '/' || clean === '/playground';
-    if (!isPlayground) {
-      return `${STUDIO_ORIGIN}${item.path}?host=${encodeURIComponent(currentHost)}`;
-    }
-    return null;
+    if (isPlayground) return null;
+    return buildHref(STUDIO_ORIGIN, item, currentHost);
   }
-  // Any other non-studio subdomain (canvas, feed, schedule, …): local items
-  // don't exist here — bounce them to studio.
+
   if (!isStudioHost()) {
-    return `${STUDIO_ORIGIN}${item.path}?host=${encodeURIComponent(currentHost)}`;
+    return buildHref(STUDIO_ORIGIN, item, currentHost);
   }
+
   return null;
 }
 
