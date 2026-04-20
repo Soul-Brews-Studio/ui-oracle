@@ -18,7 +18,7 @@ const DEFAULT_NAV: NavSet = {
       label: 'Memory',
       children: [
         { path: '/map', label: 'Map' },
-        { path: '/forum', label: 'Forum' },
+        { path: '/', label: 'Forum', studio: 'forum.buildwithoracle.com' },
         { path: '/activity?tab=searches', label: 'Activity' },
         { path: '/traces', label: 'Traces' },
       ],
