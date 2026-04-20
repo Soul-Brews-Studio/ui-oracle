@@ -1,6 +1,6 @@
 {
   "name": "ui-oracle",
-  "version": "26.4.20-alpha.7",
+  "version": "26.4.20-alpha.9",
   "private": true,
   "description": "Oracle UI monorepo — studio, vector, canvas",
   "type": "module",
@@ -36,7 +36,8 @@
     "deploy:feed": "bun --cwd apps/feed run deploy",
     "deploy:vector": "bun --cwd apps/vector run deploy",
     "deploy:canvas": "bun --cwd apps/canvas run deploy",
-    "deploy:forum": "bun --cwd apps/forum run deploy"
+    "deploy:forum": "bun --cwd apps/forum run deploy",
+    "deploy:all": "bun run deploy:studio && bun run deploy:vector && bun run deploy:canvas && bun run deploy:schedule && bun run deploy:feed && bun run deploy:forum"
   },
   "repository": {
     "type": "git",
