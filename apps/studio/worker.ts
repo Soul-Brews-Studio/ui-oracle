@@ -18,6 +18,14 @@ export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
 
+    // Forum moved to forum.buildwithoracle.com — 302 during bake, bump to 301 after 48h.
+    if (url.pathname === '/forum' || url.pathname.startsWith('/forum/') || url.pathname.startsWith('/forum?')) {
+      return Response.redirect(
+        `https://forum.buildwithoracle.com/${url.search}`,
+        302,
+      );
+    }
+
     if (url.pathname.startsWith("/api/") || url.pathname === "/api") {
       return Response.json(HELP, {
         status: 404,
