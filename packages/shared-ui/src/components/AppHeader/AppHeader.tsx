@@ -8,6 +8,8 @@ import { MainNav } from './MainNav';
 import { ToolsDropdown } from './ToolsDropdown';
 import { useBackendVersion, useMenu } from './use-menu';
 import type { CrossOriginResolver, NavItem, NavSet } from './nav-types';
+import { buildNavSet } from './nav-types';
+import bakedMenu from '../../baked-menu';
 import { reorderNavSet, type MenuConfig } from './reorder';
 
 const DEFAULT_NAV: NavSet = {
@@ -140,16 +142,21 @@ function defaultCrossOriginHref(item: NavItem): string | null {
  * then a MainNav row with optional ToolsDropdown. Apps can still compose their
  * own header out of the primitives if they need something bespoke.
  */
+// If baked-menu.ts has been populated (via `bun run sync:menu:*`), use it as the
+// hard default — skipping the /api/menu runtime fetch entirely. Gives deterministic
+// build-time menu content. Null baked = normal DEFAULT_NAV + /api/menu flow.
+const BAKED_NAV: NavSet | null = bakedMenu ? buildNavSet(bakedMenu.items) : null;
+
 export function AppHeader({
   brandLabel,
   ping,
   topRowExtras,
-  fallbackNav = DEFAULT_NAV,
+  fallbackNav = BAKED_NAV ?? DEFAULT_NAV,
   crossOriginHref = defaultCrossOriginHref,
   hideToolsDropdown = false,
   menuConfig,
 }: AppHeaderProps) {
-  const { nav, loaded } = useMenu(fallbackNav);
+  const { nav, loaded } = useMenu(fallbackNav, { skipFetch: BAKED_NAV !== null });
   const reorderedNav = useMemo(() => reorderNavSet(nav, menuConfig), [nav, menuConfig]);
   const backendVersion = useBackendVersion();
 

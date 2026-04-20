@@ -13,11 +13,15 @@ const MENU_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
  * or failure). Callers can gate visibility on `loaded` to avoid a fallback→server
  * content-jump flash.
  */
-export function useMenu(fallback: NavSet): { nav: NavSet; loaded: boolean } {
+export function useMenu(
+  fallback: NavSet,
+  options: { skipFetch?: boolean } = {},
+): { nav: NavSet; loaded: boolean } {
   const [nav, setNav] = useState<NavSet>(fallback);
-  const [loaded, setLoaded] = useState(false);
+  const [loaded, setLoaded] = useState(options.skipFetch === true);
 
   useEffect(() => {
+    if (options.skipFetch) return;
     let cancelled = false;
     (async () => {
       try {

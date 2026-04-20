@@ -37,7 +37,10 @@
     "deploy:vector": "bun --cwd apps/vector run deploy",
     "deploy:canvas": "bun --cwd apps/canvas run deploy",
     "deploy:forum": "bun --cwd apps/forum run deploy",
-    "deploy:all": "bun run deploy:studio && bun run deploy:vector && bun run deploy:canvas && bun run deploy:schedule && bun run deploy:feed && bun run deploy:forum"
+    "deploy:all": "bun run deploy:studio && bun run deploy:vector && bun run deploy:canvas && bun run deploy:schedule && bun run deploy:feed && bun run deploy:forum",
+    "sync:menu:gist": "bun run scripts/sync-menu.ts --gist https://gist.github.com/nazt/741e431a81ff32afb509cade18408054",
+    "sync:menu:api": "bun run scripts/sync-menu.ts --api http://localhost:47778/api/menu",
+    "sync:menu:reset": "bun run scripts/sync-menu.ts --reset"
   },
   "repository": {
     "type": "git",
