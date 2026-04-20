@@ -39,7 +39,7 @@
     "url": "https://github.com/Soul-Brews-Studio/ui-oracle.git"
   },
   "author": "Soul Brews Studio",
-  "license": "MIT",
+  "license": "BUSL-1.1",
   "patchedDependencies": {
     "knowledge-map-3d@github:Bombbaza/Multi-Planet-System-Knowledge-Map-3D#4dfd12d": "patches/knowledge-map-3d@github+Bombbaza+Multi-Planet-System-Knowledge-Map-3D+4dfd12d.patch"
   }
