@@ -6,7 +6,7 @@ import { ping } from '../api/oracle';
  * App-specific wiring: passes the local `ping` fn for the backend chip.
  */
 export function Header() {
-  return <AppHeader ping={ping} />;
+  return <AppHeader brandLabel="ARRA 🔮Racle — Vector" ping={ping} />;
 }
 
 /** Re-exported for existing imports (VectorSubNav etc.). */

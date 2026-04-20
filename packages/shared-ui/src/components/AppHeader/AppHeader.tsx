@@ -13,7 +13,7 @@ const DEFAULT_NAV: NavSet = {
   main: [
     { path: '/', label: 'Overview', studio: 'studio.buildwithoracle.com' },
     { path: '/search', label: 'Search', studio: 'studio.buildwithoracle.com' },
-    { path: '/feed', label: 'Feed', studio: 'feed.buildwithoracle.com' },
+    { path: '/', label: 'Feed', studio: 'feed.buildwithoracle.com' },
     { path: '/map', label: 'Memory' },
     { path: '/forum', label: 'Forum' },
     { path: '/activity?tab=searches', label: 'Activity' },
@@ -21,7 +21,7 @@ const DEFAULT_NAV: NavSet = {
     { path: '/', label: 'Canvas', studio: 'canvas.buildwithoracle.com' },
   ],
   tools: [
-    { path: '/schedule', label: 'Schedule', studio: 'schedule.buildwithoracle.com' },
+    { path: '/', label: 'Schedule', studio: 'schedule.buildwithoracle.com' },
     { path: '/pulse', label: 'Pulse' },
     { path: '/sessions', label: 'Sessions' },
     { path: '/plugins', label: 'Plugins' },
