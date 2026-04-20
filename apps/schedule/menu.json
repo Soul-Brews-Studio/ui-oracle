@@ -1,8 +1,3 @@
 {
-  "toolsOrder": ["Schedule", "Sessions", "Pulse", "Plugins", "Vector Playground", "Compare", "Evolution"],
-  "subnav": [
-    { "path": "/", "label": "Today", "icon": "📅" },
-    { "path": "/?view=upcoming", "label": "Upcoming", "icon": "⏭️" },
-    { "path": "/?view=all", "label": "All", "icon": "📋" }
-  ]
+  "toolsOrder": ["Schedule", "Sessions", "Pulse", "Plugins", "Vector Playground", "Compare", "Evolution"]
 }

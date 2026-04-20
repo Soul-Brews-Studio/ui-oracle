@@ -1,5 +1,4 @@
 {
-  "mainOrder": ["Canvas", "Overview", "Search", "Memory", "Feed"],
   "subnav": [
     { "path": "/?plugin=map", "label": "Map", "icon": "🗺️" },
     { "path": "/?plugin=planets", "label": "Planets", "icon": "🪐" },
