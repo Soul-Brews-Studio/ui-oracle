@@ -3,7 +3,8 @@ import { apiUrl } from '../../host';
 import { cached } from '../../cache';
 import { buildNavSet, type MenuApiItem, type NavSet } from './nav-types';
 
-const MENU_CACHE_KEY = 'header:menu';
+// v2: 2026-04-20 — Forum child moved to forum.buildwithoracle.com
+const MENU_CACHE_KEY = 'header:menu:v2';
 const MENU_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
 /**

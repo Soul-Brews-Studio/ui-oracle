@@ -8,7 +8,6 @@ import { DocDetail } from './pages/DocDetail';
 import { Search } from './pages/Search';
 import { Handoff } from './pages/Handoff';
 import { Activity } from './pages/Activity';
-import { Forum } from './pages/Forum';
 import { Evolution } from './pages/Evolution';
 import { Traces } from './pages/Traces';
 import { Superseded } from './pages/Superseded';
@@ -79,7 +78,6 @@ function AppContent() {
         <Route path="/graph3d" element={<Navigate to="/map" replace />} />
         <Route path="/handoff" element={<RequireAuth><Handoff /></RequireAuth>} />
         <Route path="/activity" element={<RequireAuth><Activity /></RequireAuth>} />
-        <Route path="/forum" element={<RequireAuth><Forum /></RequireAuth>} />
         <Route path="/evolution" element={<RequireAuth><Evolution /></RequireAuth>} />
         <Route path="/traces" element={<RequireAuth><Traces /></RequireAuth>} />
         <Route path="/traces/:id" element={<RequireAuth><Traces /></RequireAuth>} />

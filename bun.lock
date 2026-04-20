@@ -50,6 +50,27 @@
         "vite": "^7.2.4",
       },
     },
+    "apps/forum": {
+      "name": "forum-oracle-studio",
+      "version": "0.1.0",
+      "dependencies": {
+        "@ui-oracle/shared-ui": "workspace:*",
+        "react": "^19.2.0",
+        "react-dom": "^19.2.0",
+        "react-router-dom": "^7.11.0",
+      },
+      "devDependencies": {
+        "@tailwindcss/vite": "^4.2.1",
+        "@types/bun": "^1.3.12",
+        "@types/node": "^24.10.1",
+        "@types/react": "^19.2.5",
+        "@types/react-dom": "^19.2.3",
+        "@vitejs/plugin-react": "^5.1.1",
+        "tailwindcss": "^4.2.1",
+        "typescript": "~5.9.3",
+        "vite": "^7.2.4",
+      },
+    },
     "apps/schedule": {
       "name": "schedule-oracle-studio",
       "version": "0.1.0",
@@ -760,6 +781,8 @@
 
     "form-data": ["form-data@4.0.5", "", { "dependencies": { "asynckit": "^0.4.0", "combined-stream": "^1.0.8", "es-set-tostringtag": "^2.1.0", "hasown": "^2.0.2", "mime-types": "^2.1.12" } }, "sha512-8RipRLol37bNs2bhoV67fiTEvdTrbMUYcFTiy3+wuuOnUog2QBHCZWXDRijWQfAkhBj2Uf5UnVaiWwA5vdd82w=="],
 
+    "forum-oracle-studio": ["forum-oracle-studio@workspace:apps/forum"],
+
     "fs.realpath": ["fs.realpath@1.0.0", "", {}, "sha512-OO0pH2lK6a0hZnAdau5ItzHPI6pUlvI7jMVnxUQRtw4owF2wk8lOSabtGDCTP4Ggrg2MbGnWO9X8K1t4+fGMDw=="],
 
     "fsevents": ["fsevents@2.3.3", "", { "os": "darwin" }, "sha512-5xoDfX+fL7faATnagmWPpbFtwh/R77WmMMqqHGS65C3vvB0YHrgF+B1YmZ3441tMj5n63k0212XNoJwzlhffQw=="],
@@ -1389,8 +1412,6 @@
     "mdast-util-find-and-replace/escape-string-regexp": ["escape-string-regexp@5.0.0", "", {}, "sha512-/veY75JbMK4j1yjvuUxuVsiS/hr/4iHs9FTT6cgTexxdE0Ly/glccBAkloH/DofkjRbZU3bnoj38mOmhkZ0lHw=="],
 
     "oracle-studio/@types/three": ["@types/three@0.182.0", "", { "dependencies": { "@dimforge/rapier3d-compat": "~0.12.0", "@tweenjs/tween.js": "~23.1.3", "@types/stats.js": "*", "@types/webxr": ">=0.5.17", "@webgpu/types": "*", "fflate": "~0.8.2", "meshoptimizer": "~0.22.0" } }, "sha512-WByN9V3Sbwbe2OkWuSGyoqQO8Du6yhYaXtXLoA5FkKTUJorZ+yOHBZ35zUUPQXlAKABZmbYp5oAqpA4RBjtJ/Q=="],
-
-    "oracle-studio/knowledge-map-3d": ["knowledge-map-3d@github:Bombbaza/Multi-Planet-System-Knowledge-Map-3D#4dfd12d", { "peerDependencies": { "react": ">=18", "react-dom": ">=18", "three": ">=0.150.0" } }, "Bombbaza-Multi-Planet-System-Knowledge-Map-3D-4dfd12d", "sha512-ddXFX0qW9mEd+3JaixN8wwGwsvaFKz0foCXz+ioPQug+s84lSfZGYdJUfyB+rSnpCcnf275WQhBOSR9JYxUIlg=="],
 
     "oracle-studio/three": ["three@0.182.0", "", {}, "sha512-GbHabT+Irv+ihI1/f5kIIsZ+Ef9Sl5A1Y7imvS5RQjWgtTPfPnZ43JmlYI7NtCRDK9zir20lQpfg8/9Yd02OvQ=="],
 
