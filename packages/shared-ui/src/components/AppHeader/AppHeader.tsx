@@ -11,6 +11,7 @@ import type { CrossOriginResolver, NavItem, NavSet } from './nav-types';
 import { buildNavSet } from './nav-types';
 import bakedMenu from '../../baked-menu';
 import { reorderNavSet, type MenuConfig } from './reorder';
+import { SubNav } from '../SubNav';
 
 const DEFAULT_NAV: NavSet = {
   main: [
@@ -202,6 +203,9 @@ export function AppHeader({
           </>
         )}
       </nav>
+      {menuConfig?.subnav && menuConfig.subnav.length > 0 && (
+        <SubNav items={menuConfig.subnav} />
+      )}
     </header>
   );
 }

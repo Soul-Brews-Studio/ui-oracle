@@ -1,8 +1,10 @@
 import type { NavItem, NavSet } from './nav-types';
+import type { SubNavItem } from '../SubNav';
 
 export interface MenuConfig {
   mainOrder?: string[];
   toolsOrder?: string[];
+  subnav?: SubNavItem[];
 }
 
 /**
