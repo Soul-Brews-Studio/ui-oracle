@@ -13,7 +13,20 @@
 const STORAGE_KEY = 'oracle-studio-host';
 const RECENT_KEY = 'oracle-studio-host-recent';
 const RECENT_LIMIT = 8;
-const DEFAULT_HOST = 'http://localhost:47778';
+
+// Auto-derive default backend host from the page's own URL so the studio works
+// from any reachable hostname (m5.wg, mba.local, an IP, ...) without per-peer
+// localStorage / `?host=` setup. Falls back to literal localhost during SSR /
+// non-browser contexts. An explicit env override still wins via
+// import.meta.env.VITE_DEFAULT_HOST when teams want to pin a deployment.
+const ENV_DEFAULT =
+  typeof import.meta !== 'undefined' &&
+  (import.meta as { env?: { VITE_DEFAULT_HOST?: string } }).env?.VITE_DEFAULT_HOST;
+const DEFAULT_HOST: string =
+  ENV_DEFAULT ||
+  (typeof window !== 'undefined'
+    ? `${window.location.protocol}//${window.location.hostname}:47778`
+    : 'http://localhost:47778');
 
 const params =
   typeof window !== 'undefined'
