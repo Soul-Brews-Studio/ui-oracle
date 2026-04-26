@@ -26,6 +26,14 @@ export default {
       );
     }
 
+    // Canvas moved to canvas.buildwithoracle.com — 302 during bake, bump to 301 after 48h.
+    if (url.pathname === '/canvas' || url.pathname.startsWith('/canvas/') || url.pathname.startsWith('/canvas?')) {
+      return Response.redirect(
+        `https://canvas.buildwithoracle.com/${url.search}`,
+        302,
+      );
+    }
+
     if (url.pathname.startsWith("/api/") || url.pathname === "/api") {
       return Response.json(HELP, {
         status: 404,
