@@ -71,6 +71,27 @@
         "vite": "^7.2.4",
       },
     },
+    "apps/indexer": {
+      "name": "indexer-oracle-studio",
+      "version": "0.1.0",
+      "dependencies": {
+        "@ui-oracle/shared-ui": "workspace:*",
+        "react": "^19.2.0",
+        "react-dom": "^19.2.0",
+        "react-router-dom": "^7.11.0",
+      },
+      "devDependencies": {
+        "@tailwindcss/vite": "^4.2.1",
+        "@types/bun": "^1.3.12",
+        "@types/node": "^24.10.1",
+        "@types/react": "^19.2.5",
+        "@types/react-dom": "^19.2.3",
+        "@vitejs/plugin-react": "^5.1.1",
+        "tailwindcss": "^4.2.1",
+        "typescript": "~5.9.3",
+        "vite": "^7.2.4",
+      },
+    },
     "apps/schedule": {
       "name": "schedule-oracle-studio",
       "version": "0.1.0",
@@ -838,6 +859,8 @@
     "import-fresh": ["import-fresh@3.3.1", "", { "dependencies": { "parent-module": "^1.0.0", "resolve-from": "^4.0.0" } }, "sha512-TR3KfrTZTYLPB6jUjfx6MF9WcWrHL9su5TObK4ZkYgBdWKPOFoSoQIdEuTuR82pmtxH2spWG9h6etwfr1pLBqQ=="],
 
     "imurmurhash": ["imurmurhash@0.1.4", "", {}, "sha512-JmXMZ6wuvDmLiHEml9ykzqO6lwFbof0GG4IkcGaENdCRDDmMVnny7s5HsIgHCbaq0w2MyPhDqkhTUgS2LU2PHA=="],
+
+    "indexer-oracle-studio": ["indexer-oracle-studio@workspace:apps/indexer"],
 
     "inflight": ["inflight@1.0.6", "", { "dependencies": { "once": "^1.3.0", "wrappy": "1" } }, "sha512-k92I/b08q4wvFscXCLvqfsHCrjrF7yiXsQuIVvVE7N82W3+aqpzuUdBbfhWcy/FZR3/4IgflMgKLOsvPDrGCJA=="],
 
