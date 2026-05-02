@@ -1,6 +1,6 @@
 {
   "name": "ui-oracle",
-  "version": "26.4.20-alpha.14",
+  "version": "26.5.2-alpha.1704",
   "private": true,
   "description": "Oracle UI monorepo — studio, vector, canvas",
   "type": "module",
