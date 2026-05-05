@@ -230,7 +230,10 @@ export async function getMap3d(model?: string): Promise<{ documents: MapDocument
   const key = `map3d:${model ?? 'default'}`;
   return cached(key, ONE_DAY, async () => {
     const res = await fetch(`${API_BASE}/map3d${params}`);
-    return res.json();
+    const data = await res.json();
+    // Don't cache empty responses — collection may be populating, retry next click
+    if (!data?.documents?.length) throw new Error('empty map3d — not caching');
+    return data;
   }, { tag: 'map3d', store: 'idb' });
 }
 
