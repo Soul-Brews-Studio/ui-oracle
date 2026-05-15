@@ -1,0 +1,14 @@
+oracle: maw-studio
+oracle-repo: https://github.com/Soul-Brews-Studio/maw-studio-oracle
+local-oracle-repo: /opt/Code/github.com/Soul-Brews-Studio/maw-studio-oracle
+date: 2026-05-15
+mode: caretaker-incubator
+source: https://github.com/Soul-Brews-Studio/ui-oracle
+purpose: maw-studio is the living caretaker/incubator for buildwithoracle.com UI surfaces while ui-oracle remains the browser-facing Oracle cockpit.
+
+previous-task-breadcrumb:
+  oracle: arra-mcp-installation-guide-oracle
+  oracle-repo: https://github.com/Soul-Brews-Studio/arra-mcp-installation-guide-oracle
+  date: 2026-05-05
+  mode: default
+  purpose: fix qwen3 + ADD button click handler in Map.tsx (addGlobe noop bug)
