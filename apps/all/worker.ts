@@ -15,7 +15,7 @@ export default {
     if (HASHED_ASSET.test(url.pathname)) {
       headers.set("cache-control", "public, max-age=31536000, immutable");
     } else {
-      headers.set("cache-control", "public, max-age=3600, stale-while-revalidate=86400");
+      headers.set("cache-control", "no-cache");
     }
 
     return new Response(response.body, {

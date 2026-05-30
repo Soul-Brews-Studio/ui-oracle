@@ -41,7 +41,14 @@ if (urlHost && typeof window !== 'undefined') {
   window.location.replace(url.toString());
 }
 
-const storedHost = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEY) : null;
+let storedHost = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEY) : null;
+// Self-heal: a stored host pointing at a deployed public domain (e.g. a stale
+// "app.buildwithoracle.com:47778" left by an older build, or any *.workers.dev)
+// can never be a real :47778 backend — drop it and fall back to localhost.
+if (storedHost && /(?:\.buildwithoracle\.com|\.workers\.dev)/i.test(storedHost)) {
+  if (typeof window !== 'undefined') localStorage.removeItem(STORAGE_KEY);
+  storedHost = null;
+}
 const hostParam = storedHost ?? DEFAULT_HOST;
 
 export const isRemote = !!storedHost;
