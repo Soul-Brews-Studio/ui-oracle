@@ -14,29 +14,18 @@ const STORAGE_KEY = 'oracle-studio-host';
 const RECENT_KEY = 'oracle-studio-host-recent';
 const RECENT_LIMIT = 8;
 
-// Auto-derive default backend host from the page's own URL so the studio works
-// from any reachable hostname (m5.wg, mba.local, an IP, ...) without per-peer
-// localStorage / `?host=` setup. Falls back to literal localhost during SSR /
-// non-browser contexts. An explicit env override still wins via
-// import.meta.env.VITE_DEFAULT_HOST when teams want to pin a deployment.
+// Backend host default. The studio is a thin client whose :47778 backend runs
+// on the user's OWN machine, so the default is ALWAYS localhost:47778. Two
+// overrides still win, in order:
+//   1. import.meta.env.VITE_DEFAULT_HOST — build-time pin for a deployment.
+//   2. a stored / `?host=` value — see `hostParam` below.
+// For LAN / multi-machine setups (e.g. a WireGuard peer at m5.wg, a bare IP),
+// point at the backend explicitly via `?host=http://m5.wg:47778` (persisted) or
+// a VITE_DEFAULT_HOST build pin — the default no longer derives from the page.
 const ENV_DEFAULT =
   typeof import.meta !== 'undefined' &&
   (import.meta as { env?: { VITE_DEFAULT_HOST?: string } }).env?.VITE_DEFAULT_HOST;
-// Deployed public hosts (Cloudflare custom domains / *.workers.dev) can never
-// reach a :47778 backend on their own origin — the thin client's backend always
-// runs on the user's own machine. So default those to localhost. On LAN
-// hostnames (m5.wg, mba.local, a bare IP, …) keep deriving from the page so
-// peer / multi-machine setups still work without per-peer config.
-function isDeployedPublicHost(h: string): boolean {
-  return h.endsWith('.buildwithoracle.com') || h.endsWith('.workers.dev');
-}
-const DEFAULT_HOST: string =
-  ENV_DEFAULT ||
-  (typeof window !== 'undefined'
-    ? isDeployedPublicHost(window.location.hostname)
-      ? 'http://localhost:47778'
-      : `${window.location.protocol}//${window.location.hostname}:47778`
-    : 'http://localhost:47778');
+const DEFAULT_HOST: string = ENV_DEFAULT || 'http://localhost:47778';
 
 const params =
   typeof window !== 'undefined'
