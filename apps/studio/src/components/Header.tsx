@@ -1,6 +1,5 @@
-import { Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
-import { AppHeader } from '@ui-oracle/shared-ui';
+import { AppHeader, AppLink as Link } from '@ui-oracle/shared-ui';
 import { useAuth } from '../contexts/AuthContext';
 import { API_BASE, ping } from '../api/oracle';
 import menuConfig from '../../menu.json';

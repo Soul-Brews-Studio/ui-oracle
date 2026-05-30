@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavTo } from '@ui-oracle/shared-ui';
 import * as THREE from 'three';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
@@ -94,7 +94,7 @@ interface GlobeData {
 }
 
 export function Map() {
-  const navigate = useNavigate();
+  const navigate = useNavTo();
   const containerRef = useRef<HTMLDivElement>(null);
   const [globes, setGlobes] = useState<GlobeData[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);

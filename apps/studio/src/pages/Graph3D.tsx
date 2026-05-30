@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavTo } from '@ui-oracle/shared-ui';
 import * as THREE from 'three';
 import { getGraph, getFile } from '../api/oracle';
 import { useHandTracking } from '../hooks/useHandTracking';
@@ -146,7 +146,7 @@ export function Graph3D() {
   const [hoveredNode, setHoveredNode] = useState<Node | null>(null);
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);  // Clicked/locked node
   const [showHud, setShowHud] = useState(true);
-  const navigate = useNavigate();
+  const navigate = useNavTo();
 
   // File viewer state
   const [fileContent, setFileContent] = useState<string | null>(null);

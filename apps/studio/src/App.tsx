@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { BasePathProvider, useBase, withBase } from '@ui-oracle/shared-ui';
 import { Header } from './components/Header';
 
 import { Overview } from './pages/Overview';
@@ -33,21 +34,21 @@ import { setVaultRepo } from './utils/docDisplay';
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, authEnabled, isLoading } = useAuth();
   const location = useLocation();
+  const base = useBase();
 
   if (isLoading) {
     return <div style={{ padding: 48, textAlign: 'center', color: '#888' }}>Loading...</div>;
   }
 
   if (authEnabled && !isAuthenticated) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    return <Navigate to={withBase(base, '/login')} state={{ from: location }} replace />;
   }
 
   return <>{children}</>;
 }
 
-function AppContent() {
-  const location = useLocation();
-  const isLoginPage = location.pathname === '/login';
+// ⌘K command palette — shared by standalone and combined mounts.
+function CommandPaletteHotkey() {
   const [showCmdK, setShowCmdK] = useState(false);
 
   useEffect(() => {
@@ -61,43 +62,29 @@ function AppContent() {
     return () => window.removeEventListener('keydown', handler);
   }, []);
 
-  return (
-    <>
-      {!isLoginPage && <Header />}
-      {showCmdK && <CommandPalette onClose={() => setShowCmdK(false)} />}
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/" element={<RequireAuth><Overview /></RequireAuth>} />
-        <Route path="/feed" element={<RequireAuth><Feed /></RequireAuth>} />
-        <Route path="/doc/:id" element={<RequireAuth><DocDetail /></RequireAuth>} />
-        <Route path="/search" element={<RequireAuth><Search /></RequireAuth>} />
-        <Route path="/playground" element={<RequireAuth><Playground /></RequireAuth>} />
-        <Route path="/compare" element={<RequireAuth><Compare /></RequireAuth>} />
-        <Route path="/map" element={<RequireAuth><Map /></RequireAuth>} />
-        <Route path="/graph" element={<Navigate to="/map" replace />} />
-        <Route path="/graph3d" element={<Navigate to="/map" replace />} />
-        <Route path="/handoff" element={<RequireAuth><Handoff /></RequireAuth>} />
-        <Route path="/activity" element={<RequireAuth><Activity /></RequireAuth>} />
-        <Route path="/evolution" element={<RequireAuth><Evolution /></RequireAuth>} />
-        <Route path="/traces" element={<RequireAuth><Traces /></RequireAuth>} />
-        <Route path="/traces/:id" element={<RequireAuth><Traces /></RequireAuth>} />
-        <Route path="/superseded" element={<RequireAuth><Superseded /></RequireAuth>} />
-        <Route path="/pulse" element={<RequireAuth><Pulse /></RequireAuth>} />
-        <Route path="/sessions" element={<RequireAuth><Sessions /></RequireAuth>} />
-        <Route path="/sessions/:id" element={<RequireAuth><Sessions /></RequireAuth>} />
-        <Route path="/canvas" element={<RequireAuth><Canvas /></RequireAuth>} />
-        <Route path="/planets" element={<RequireAuth><Planets /></RequireAuth>} />
-        <Route path="/plugins" element={<RequireAuth><Plugins /></RequireAuth>} />
-        <Route path="/schedule" element={<RequireAuth><Schedule /></RequireAuth>} />
-        <Route path="/settings" element={<RequireAuth><Settings /></RequireAuth>} />
-        <Route path="/menu" element={<RequireAuth><MenuEditor /></RequireAuth>} />
-      </Routes>
-
-    </>
-  );
+  if (!showCmdK) return null;
+  return <CommandPalette onClose={() => setShowCmdK(false)} />;
 }
 
-function App() {
+// Standalone-only header: hidden on /login (relative to the active base).
+function StandaloneHeader() {
+  const location = useLocation();
+  const base = useBase();
+  const isLoginPage = location.pathname === withBase(base, '/login');
+  if (isLoginPage) return null;
+  return <Header />;
+}
+
+/**
+ * StudioRoutes — the named, relativized routes fragment.
+ *
+ * - No <BrowserRouter>: nested under <Route path="/studio/*"> in combined mode,
+ *   or under root standalone.
+ * - When `header` is true (standalone), renders the conditional <Header/>
+ *   (hidden on /login). apps/all omits it and renders one unified header.
+ * - Includes the ⌘K CommandPalette in both modes.
+ */
+export function StudioRoutes({ header = false }: { header?: boolean }) {
   useEffect(() => {
     getStats().then(stats => {
       if (stats.vault_repo) setVaultRepo(stats.vault_repo);
@@ -105,14 +92,54 @@ function App() {
   }, []);
 
   return (
-    <BrowserRouter>
-      <BackendGate>
-        <AuthProvider>
-          <AppContent />
-        </AuthProvider>
-      </BackendGate>
-    </BrowserRouter>
+    <BackendGate>
+      <AuthProvider>
+        {header && <StandaloneHeader />}
+        <CommandPaletteHotkey />
+        <Routes>
+          <Route path="login" element={<Login />} />
+          <Route index element={<RequireAuth><Overview /></RequireAuth>} />
+          <Route path="feed" element={<RequireAuth><Feed /></RequireAuth>} />
+          <Route path="doc/:id" element={<RequireAuth><DocDetail /></RequireAuth>} />
+          <Route path="search" element={<RequireAuth><Search /></RequireAuth>} />
+          <Route path="playground" element={<RequireAuth><Playground /></RequireAuth>} />
+          <Route path="compare" element={<RequireAuth><Compare /></RequireAuth>} />
+          <Route path="map" element={<RequireAuth><Map /></RequireAuth>} />
+          <Route path="graph" element={<GraphRedirect />} />
+          <Route path="graph3d" element={<GraphRedirect />} />
+          <Route path="handoff" element={<RequireAuth><Handoff /></RequireAuth>} />
+          <Route path="activity" element={<RequireAuth><Activity /></RequireAuth>} />
+          <Route path="evolution" element={<RequireAuth><Evolution /></RequireAuth>} />
+          <Route path="traces" element={<RequireAuth><Traces /></RequireAuth>} />
+          <Route path="traces/:id" element={<RequireAuth><Traces /></RequireAuth>} />
+          <Route path="superseded" element={<RequireAuth><Superseded /></RequireAuth>} />
+          <Route path="pulse" element={<RequireAuth><Pulse /></RequireAuth>} />
+          <Route path="sessions" element={<RequireAuth><Sessions /></RequireAuth>} />
+          <Route path="sessions/:id" element={<RequireAuth><Sessions /></RequireAuth>} />
+          <Route path="canvas" element={<RequireAuth><Canvas /></RequireAuth>} />
+          <Route path="planets" element={<RequireAuth><Planets /></RequireAuth>} />
+          <Route path="plugins" element={<RequireAuth><Plugins /></RequireAuth>} />
+          <Route path="schedule" element={<RequireAuth><Schedule /></RequireAuth>} />
+          <Route path="settings" element={<RequireAuth><Settings /></RequireAuth>} />
+          <Route path="menu" element={<RequireAuth><MenuEditor /></RequireAuth>} />
+        </Routes>
+      </AuthProvider>
+    </BackendGate>
   );
 }
 
-export default App;
+// Base-aware redirect for legacy /graph and /graph3d -> /map.
+function GraphRedirect() {
+  const base = useBase();
+  return <Navigate to={withBase(base, '/map')} replace />;
+}
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <BasePathProvider value="">
+        <StudioRoutes header />
+      </BasePathProvider>
+    </BrowserRouter>
+  );
+}

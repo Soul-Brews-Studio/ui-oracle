@@ -102,6 +102,11 @@ interface AppHeaderProps {
   hideToolsDropdown?: boolean;
   /** Per-app label ordering for main/tools. Unknown labels are ignored. */
   menuConfig?: MenuConfig;
+  /** Combined single-origin bundle mode. Opt-in; default false = current behavior. */
+  combinedMode?: boolean;
+  /** In-app href resolver for combined bundles. When provided, nav renders an
+   *  in-app <Link> to inAppHref(item) instead of <Link to={item.path}>. Opt-in. */
+  inAppHref?: (item: NavItem) => string;
 }
 
 // Unified cross-origin resolver — preserves BOTH `item.path` and `item.query`
@@ -156,6 +161,8 @@ export function AppHeader({
   crossOriginHref = defaultCrossOriginHref,
   hideToolsDropdown = false,
   menuConfig,
+  combinedMode = false,
+  inAppHref,
 }: AppHeaderProps) {
   const { nav, loaded } = useMenu(fallbackNav, { skipFetch: BAKED_NAV !== null });
   const reorderedNav = useMemo(() => reorderNavSet(nav, menuConfig), [nav, menuConfig]);
@@ -195,11 +202,21 @@ export function AppHeader({
           loaded ? 'opacity-100' : 'opacity-0'
         }`}
       >
-        <MainNav items={reorderedNav.main} crossOriginHref={crossOriginHref} />
+        <MainNav
+          items={reorderedNav.main}
+          crossOriginHref={crossOriginHref}
+          combinedMode={combinedMode}
+          inAppHref={inAppHref}
+        />
         {!hideToolsDropdown && reorderedNav.tools.length > 0 && (
           <>
             <span className="w-px h-4 bg-border mx-2" />
-            <ToolsDropdown items={reorderedNav.tools} crossOriginHref={crossOriginHref} />
+            <ToolsDropdown
+              items={reorderedNav.tools}
+              crossOriginHref={crossOriginHref}
+              combinedMode={combinedMode}
+              inAppHref={inAppHref}
+            />
           </>
         )}
       </nav>

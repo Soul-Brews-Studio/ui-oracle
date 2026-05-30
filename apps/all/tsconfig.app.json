@@ -1,0 +1,39 @@
+{
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
+    "target": "ES2022",
+    "useDefineForClassFields": true,
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "types": ["vite/client", "bun"],
+    "skipLibCheck": true,
+
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+    "jsx": "react-jsx",
+
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "erasableSyntaxOnly": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedSideEffectImports": true,
+    "resolveJsonModule": true
+  },
+  "include": ["src", "../studio/src", "../vector/src", "../canvas/src", "../feed/src", "../forum/src", "../schedule/src", "../indexer/src"],
+  "exclude": [
+    "src/**/__tests__/**",
+    "../studio/src/**/__tests__/**",
+    "../vector/src/**/__tests__/**",
+    "../canvas/src/**/__tests__/**",
+    "../feed/src/**/__tests__/**",
+    "../forum/src/**/__tests__/**",
+    "../schedule/src/**/__tests__/**",
+    "../indexer/src/**/__tests__/**",
+    "node_modules",
+    "**/node_modules/**"
+  ]
+}

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
+import { useNavTo } from '@ui-oracle/shared-ui';
 import { SidebarLayout, TOOLS_NAV } from '../components/SidebarLayout';
 import { getDocDisplayInfo } from '../utils/docDisplay';
 import { Spinner } from '../components/ui/Spinner';
@@ -58,7 +59,7 @@ const TRACE_FILTERS = [
 
 export function Traces() {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
+  const navigate = useNavTo();
   const [traces, setTraces] = useState<TraceSummary[]>([]);
   const [selectedTrace, setSelectedTrace] = useState<TraceDetail | null>(null);
   const [loading, setLoading] = useState(true);

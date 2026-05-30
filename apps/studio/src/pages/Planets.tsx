@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavTo } from '@ui-oracle/shared-ui';
 import { usePlanetsData } from '../hooks/usePlanetsData';
 import { usePlanetsSearch } from '../hooks/usePlanetsSearch';
 import { PlanetsCanvas } from '../components/planets/PlanetsCanvas';
@@ -10,7 +10,7 @@ import { NebulaLegend } from '../components/planets/NebulaLegend';
 import { TYPE_COLORS } from '../lib/type-colors';
 
 export function Planets() {
-  const navigate = useNavigate();
+  const navigate = useNavTo();
   const data = usePlanetsData();
   const search = usePlanetsSearch();
   const [visibleTypes, setVisibleTypes] = useState<Set<string>>(() => new Set(Object.keys(TYPE_COLORS)));

@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
+import { useBase, useNavTo, withBase } from '@ui-oracle/shared-ui';
 import { usePlanetsData } from '../../hooks/usePlanetsData';
 import { usePlanetsSearch } from '../../hooks/usePlanetsSearch';
 import { PlanetsCanvas } from '../../components/planets/PlanetsCanvas';
@@ -11,6 +12,8 @@ import { TYPE_COLORS } from '../../lib/type-colors';
 export function PlanetsPlugin() {
   const data = usePlanetsData();
   const search = usePlanetsSearch();
+  const base = useBase();
+  const navigate = useNavTo();
   const [visibleTypes, setVisibleTypes] = useState<Set<string>>(() => new Set(Object.keys(TYPE_COLORS)));
   const [selectedProject, setSelectedProject] = useState<string | null>(null);
 
@@ -50,7 +53,11 @@ export function PlanetsPlugin() {
           nebulae={data.nebulae}
           highlightIds={search.matchIds}
           onDocumentClick={(doc) => {
-            window.location.href = `/doc/${encodeURIComponent(doc.id)}`;
+            if (base) {
+              navigate(withBase(base, `/studio/doc/${encodeURIComponent(doc.id)}`));
+            } else {
+              window.location.href = `/doc/${encodeURIComponent(doc.id)}`;
+            }
           }}
         />
         <PlanetsHUD

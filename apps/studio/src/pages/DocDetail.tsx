@@ -1,4 +1,5 @@
-import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
+import { useParams, useLocation } from 'react-router-dom';
+import { AppLink as Link, useNavTo } from '@ui-oracle/shared-ui';
 import { useState, useEffect, useCallback } from 'react';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -17,7 +18,7 @@ interface LocationState {
 
 export function DocDetail() {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
+  const navigate = useNavTo();
   const location = useLocation();
   const [doc, setDoc] = useState<Document | null>(null);
   const [fullContent, setFullContent] = useState<string | null>(null);
