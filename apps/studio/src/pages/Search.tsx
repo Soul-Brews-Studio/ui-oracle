@@ -5,6 +5,34 @@ import { search } from '../api/oracle';
 import type { Document } from '../api/oracle';
 import { LogCard } from '../components/LogCard';
 
+const RECENT_KEY = 'oracle-recent-searches';
+const RECENT_LIMIT = 8;
+
+function getRecent(): string[] {
+  try {
+    const v = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]');
+    return Array.isArray(v) ? v.filter((t): t is string => typeof t === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
+function rememberSearch(q: string): string[] {
+  const term = q.trim();
+  if (!term) return getRecent();
+  // most-recent first, case-insensitive dedup, capped
+  const next = [term, ...getRecent().filter((t) => t.toLowerCase() !== term.toLowerCase())].slice(0, RECENT_LIMIT);
+  try {
+    localStorage.setItem(RECENT_KEY, JSON.stringify(next));
+  } catch {
+    /* storage unavailable — ignore */
+  }
+  return next;
+}
+
+const CHIP =
+  'bg-bg-card border border-border text-text-secondary px-4 py-2 rounded-[20px] cursor-pointer text-sm transition-all duration-200 hover:border-accent hover:text-accent';
+
 export function Search() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [query, setQuery] = useState(searchParams.get('q') || '');
@@ -12,6 +40,7 @@ export function Search() {
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
   const [searched, setSearched] = useState(false);
+  const [recent, setRecent] = useState<string[]>(() => getRecent());
 
   useEffect(() => {
     const q = searchParams.get('q');
@@ -30,17 +59,24 @@ export function Search() {
       const data = await search(q, 'all', 50);
       setResults(data.results);
       setTotal(data.total);
+      setRecent(rememberSearch(q));
     } finally {
       setLoading(false);
     }
   }
 
+  // Used by the form and the Recent/suggestion chips. Updating searchParams
+  // triggers doSearch via the effect above.
+  function runSearch(term: string) {
+    const q = term.trim();
+    if (!q) return;
+    setQuery(q);
+    setSearchParams({ q });
+  }
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (query.trim()) {
-      setSearchParams({ q: query });
-      // doSearch is called by useEffect when searchParams changes
-    }
+    runSearch(query);
   }
 
   return (
@@ -89,18 +125,35 @@ export function Search() {
 
       {!searched && (
         <div className="text-center mt-12">
+          {recent.length > 0 && (
+            <div className="mb-8">
+              <div className="flex items-center justify-center gap-3 mb-4">
+                <p className="text-text-muted text-sm">Recent searches</p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    try { localStorage.removeItem(RECENT_KEY); } catch { /* ignore */ }
+                    setRecent([]);
+                  }}
+                  className="text-text-muted text-xs underline-offset-2 hover:text-accent hover:underline"
+                >
+                  clear
+                </button>
+              </div>
+              <div className="flex justify-center gap-2 flex-wrap">
+                {recent.map(term => (
+                  <button key={term} type="button" onClick={() => runSearch(term)} className={CHIP}>
+                    {term}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           <p className="text-text-muted text-sm mb-4">Try searching for:</p>
           <div className="flex justify-center gap-2 flex-wrap">
             {['trust', 'safety', 'git', 'context', 'pattern'].map(term => (
-              <button
-                key={term}
-                onClick={() => {
-                  setQuery(term);
-                  setSearchParams({ q: term });
-                  doSearch(term);
-                }}
-                className="bg-bg-card border border-border text-text-secondary px-4 py-2 rounded-[20px] cursor-pointer text-sm transition-all duration-200 hover:border-accent hover:text-accent"
-              >
+              <button key={term} type="button" onClick={() => runSearch(term)} className={CHIP}>
                 {term}
               </button>
             ))}
