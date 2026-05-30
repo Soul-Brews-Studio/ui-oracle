@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { BasePathProvider } from '@ui-oracle/shared-ui';
 import { CombinedHeader } from './CombinedHeader';
 
@@ -21,14 +21,7 @@ export default function App() {
     <BrowserRouter>
       <CombinedHeader />
       <Routes>
-        <Route
-          path="/studio/*"
-          element={
-            <BasePathProvider value="/studio">
-              <StudioRoutes />
-            </BasePathProvider>
-          }
-        />
+        {/* Satellites first (most specific) — each shadows any studio stub at the same path. */}
         <Route
           path="/vector/*"
           element={
@@ -77,7 +70,15 @@ export default function App() {
             </BasePathProvider>
           }
         />
-        <Route path="/" element={<Navigate to="/studio" replace />} />
+        {/* Studio mounted at the ROOT catch-all — its index route serves "/". */}
+        <Route
+          path="/*"
+          element={
+            <BasePathProvider value="">
+              <StudioRoutes />
+            </BasePathProvider>
+          }
+        />
       </Routes>
     </BrowserRouter>
   );

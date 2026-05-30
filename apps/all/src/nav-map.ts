@@ -6,7 +6,7 @@ import type { NavItem } from '@ui-oracle/shared-ui';
  * the empty base (i.e. their `path` is used verbatim).
  */
 export const SUBDOMAIN_TO_BASE: Record<string, string> = {
-  'studio.buildwithoracle.com': '/studio',
+  'studio.buildwithoracle.com': '',
   'vector.buildwithoracle.com': '/vector',
   'canvas.buildwithoracle.com': '/canvas',
   'feed.buildwithoracle.com': '/feed',
@@ -21,10 +21,10 @@ export const SUBDOMAIN_TO_BASE: Record<string, string> = {
  * `query` appended as `?k=v`.
  */
 export function inAppHref(item: NavItem): string {
-  // Items without a mapped `studio` host belong to studio (the hub that owns the
-  // shared tools/routes — Pulse, Traces, Sessions, …), so default to the /studio
-  // section rather than top-level, where those routes don't exist.
-  const base = (item.studio && SUBDOMAIN_TO_BASE[item.studio]) || '/studio';
+  // Studio is mounted at the ROOT, so studio's own tools (Pulse, Traces,
+  // Sessions, …) and items mapped to the studio host both resolve against the
+  // empty base. Satellites keep their path prefix from the map.
+  const base = item.studio ? (SUBDOMAIN_TO_BASE[item.studio] ?? '') : '';
   let href = base + item.path;
 
   if (item.query) {

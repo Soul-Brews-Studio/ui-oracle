@@ -4,16 +4,7 @@
   "compatibility_date": "2025-06-01",
   "account_id": "a5eabdc2b11aae9bd5af46bd6a88179e",
   "workers_dev": true,
-  "routes": [
-    {
-      "pattern": "studio.buildwithoracle.com",
-      "custom_domain": true
-    },
-    {
-      "pattern": "local.buildwithoracle.com",
-      "custom_domain": true
-    }
-  ],
+  "routes": [],
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",
