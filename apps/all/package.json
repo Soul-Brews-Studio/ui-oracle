@@ -1,10 +1,17 @@
 {
-  "name": "all-oracle-studio",
+  "name": "@soul-brews-studio/arra-oracle-studio",
   "version": "0.1.0",
   "type": "module",
-  "description": "Combined bundle — app.buildwithoracle.com",
+  "description": "ARRA 🔮Racle — the combined Oracle hub (studio + vector + canvas + feed + forum + schedule + indexer) in one bundle. Run it locally with a static server + /api proxy to your local arra-oracle backend.",
+  "keywords": [
+    "arra-oracle",
+    "oracle-studio",
+    "buildwithoracle",
+    "thin-client",
+    "spa"
+  ],
   "bin": {
-    "all-oracle-studio": "./bin/serve.ts"
+    "arra-oracle-studio": "./bin/serve.ts"
   },
   "files": [
     "bin/",
@@ -12,6 +19,9 @@
   ],
   "engines": {
     "bun": ">=1.2.0"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "repository": {
     "type": "git",
@@ -25,12 +35,19 @@
     "deploy": "bun run build && wrangler deploy",
     "prepublishOnly": "bun run build"
   },
-  "dependencies": {
+  "comment:deps": "No runtime dependencies — bin/serve.ts uses only Node builtins (fs/path) + Bun.serve, and dist/ is the self-contained Vite bundle (react/three/shared-ui already inlined). Everything below is build-time only.",
+  "devDependencies": {
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
+    "@tailwindcss/vite": "^4.2.1",
+    "@types/bun": "^1.3.12",
+    "@types/node": "^24.10.1",
+    "@types/react": "^19.2.5",
+    "@types/react-dom": "^19.2.3",
     "@types/three": "^0.182.0",
     "@ui-oracle/shared-ui": "workspace:*",
+    "@vitejs/plugin-react": "^5.1.1",
     "knowledge-map-3d": "github:Bombbaza/Multi-Planet-System-Knowledge-Map-3D",
     "ml5": "1",
     "react": "^19.2.0",
@@ -39,16 +56,8 @@
     "react-router-dom": "^7.11.0",
     "recharts": "^3.6.0",
     "remark-gfm": "^4.0.1",
-    "three": "^0.182.0"
-  },
-  "devDependencies": {
-    "@tailwindcss/vite": "^4.2.1",
-    "@types/bun": "^1.3.12",
-    "@types/node": "^24.10.1",
-    "@types/react": "^19.2.5",
-    "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^5.1.1",
     "tailwindcss": "^4.2.1",
+    "three": "^0.182.0",
     "typescript": "~5.9.3",
     "vite": "^7.2.4"
   },

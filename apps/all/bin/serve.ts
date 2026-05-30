@@ -6,9 +6,9 @@
  * /vector, /feed, /canvas, /forum, /schedule, /indexer.
  *
  * Usage:
- *   bunx all-oracle-studio                          # default: port 3000, API at localhost:47778
- *   bunx all-oracle-studio --port 4000              # custom port
- *   bunx all-oracle-studio --api http://host:47778  # custom backend API URL
+ *   bunx @soul-brews-studio/arra-oracle-studio                          # default: port 3000, API at localhost:47778
+ *   bunx @soul-brews-studio/arra-oracle-studio --port 4000              # custom port
+ *   bunx @soul-brews-studio/arra-oracle-studio --api http://host:47778  # custom backend API URL
  */
 
 import { readFileSync, existsSync } from 'fs';
@@ -26,7 +26,7 @@ if (args.includes('--help') || args.includes('-h')) {
 ARRA 🔮Racle — combined Oracle hub (studio + vector + canvas + feed + forum + schedule + indexer)
 
 Usage:
-  all-oracle-studio [options]
+  arra-oracle-studio [options]
 
 Options:
   --port <number>   Port to serve on (default: 3000)
