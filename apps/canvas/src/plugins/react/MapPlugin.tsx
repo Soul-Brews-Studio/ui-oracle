@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { KnowledgeMap } from 'knowledge-map-3d';
-import { useBase, useNavTo, withBase } from '@ui-oracle/shared-ui';
+import { useNavigate } from 'react-router-dom';
+import { useBase } from '@ui-oracle/shared-ui';
 import { usePlanetsData } from '../../hooks/usePlanetsData';
 import { usePlanetsSearch } from '../../hooks/usePlanetsSearch';
 import { PlanetsLoading, PlanetsEmpty } from '../../components/planets/PlanetsEmpty';
@@ -11,7 +12,7 @@ export function MapPlugin() {
   const data = usePlanetsData();
   const search = usePlanetsSearch();
   const base = useBase();
-  const navigate = useNavTo();
+  const navigate = useNavigate();
   const [visibleTypes, setVisibleTypes] = useState<Set<string>>(() => new Set(Object.keys(TYPE_COLORS)));
 
   const filteredDocs = useMemo(
@@ -40,7 +41,8 @@ export function MapPlugin() {
         highlightIds={search.matchIds}
         onDocumentClick={(doc) => {
           if (base) {
-            navigate(withBase(base, `/studio/doc/${encodeURIComponent(doc.id)}`));
+            // Combined bundle: studio's doc viewer is at the root /doc/:id.
+            navigate(`/doc/${encodeURIComponent(doc.id)}`);
           } else {
             window.location.href = `/doc/${encodeURIComponent(doc.id)}`;
           }

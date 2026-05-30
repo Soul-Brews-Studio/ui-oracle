@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
-import { useBase, useNavTo, withBase } from '@ui-oracle/shared-ui';
+import { useNavigate } from 'react-router-dom';
+import { useBase } from '@ui-oracle/shared-ui';
 import { usePlanetsData } from '../../hooks/usePlanetsData';
 import { usePlanetsSearch } from '../../hooks/usePlanetsSearch';
 import { PlanetsCanvas } from '../../components/planets/PlanetsCanvas';
@@ -13,7 +14,7 @@ export function PlanetsPlugin() {
   const data = usePlanetsData();
   const search = usePlanetsSearch();
   const base = useBase();
-  const navigate = useNavTo();
+  const navigate = useNavigate();
   const [visibleTypes, setVisibleTypes] = useState<Set<string>>(() => new Set(Object.keys(TYPE_COLORS)));
   const [selectedProject, setSelectedProject] = useState<string | null>(null);
 
@@ -54,7 +55,8 @@ export function PlanetsPlugin() {
           highlightIds={search.matchIds}
           onDocumentClick={(doc) => {
             if (base) {
-              navigate(withBase(base, `/studio/doc/${encodeURIComponent(doc.id)}`));
+              // Combined bundle: studio's doc viewer is at the root /doc/:id.
+              navigate(`/doc/${encodeURIComponent(doc.id)}`);
             } else {
               window.location.href = `/doc/${encodeURIComponent(doc.id)}`;
             }
