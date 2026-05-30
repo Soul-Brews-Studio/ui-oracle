@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { PageShell } from '@ui-oracle/shared-ui';
+import { PageShell, AppLink as Link } from '@ui-oracle/shared-ui';
 import { getStats, reflect, stripProjectPrefix } from '../api/oracle';
 import type { Document, Stats } from '../api/oracle';
 

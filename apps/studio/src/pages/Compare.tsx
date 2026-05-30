@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
+import { useNavTo } from '@ui-oracle/shared-ui';
 import { search } from '../api/oracle';
 import type { Document } from '../api/oracle';
 import { Spinner } from '../components/ui/Spinner';
@@ -45,7 +46,7 @@ const TYPE_BADGE_STYLES: Record<string, { bg: string; color: string }> = {
 };
 
 export function Compare() {
-  const navigate = useNavigate();
+  const navigate = useNavTo();
   const [searchParams, setSearchParams] = useSearchParams();
   const [query, setQuery] = useState(searchParams.get('q') || '');
   const [mode, setMode] = useState<'vector' | 'hybrid' | 'fts'>(

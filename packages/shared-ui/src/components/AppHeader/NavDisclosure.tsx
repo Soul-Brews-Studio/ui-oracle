@@ -6,6 +6,11 @@ import { isActiveNav } from './nav-types';
 interface NavDisclosureProps {
   item: NavItem;
   crossOriginHref: CrossOriginResolver;
+  /** Combined single-origin bundle mode. Opt-in; default false. */
+  combinedMode?: boolean;
+  /** In-app href resolver for combined bundles. When provided, in-app
+   *  <Link>s target inAppHref(item) instead of item.path. Opt-in. */
+  inAppHref?: (item: NavItem) => string;
 }
 
 /**
@@ -14,10 +19,13 @@ interface NavDisclosureProps {
  * itself navigates to `item.path` (or its cross-origin href) so a Canvas
  * parent with `studio` lands at the studio root.
  */
-export function NavDisclosure({ item, crossOriginHref }: NavDisclosureProps) {
+export function NavDisclosure({ item, crossOriginHref, combinedMode = false, inAppHref }: NavDisclosureProps) {
   const location = useLocation();
   const [open, setOpen] = useState(false);
   const [isCoarse, setIsCoarse] = useState(false);
+
+  // In combined single-origin bundles, resolve in-app targets via inAppHref.
+  const inApp = combinedMode && inAppHref ? inAppHref : undefined;
 
   useEffect(() => {
     if (typeof window === 'undefined' || !window.matchMedia) return;
@@ -31,9 +39,13 @@ export function NavDisclosure({ item, crossOriginHref }: NavDisclosureProps) {
   const children = item.children ?? [];
   const parentHref = crossOriginHref(item);
   const hasRealPath = item.path && item.path !== '#';
-  const parentActive = isActiveNav(location, item);
+  const parentActive = inApp
+    ? isActiveNav(location, item, { ignoreHostGate: true })
+    : isActiveNav(location, item);
   const anyActive = parentActive
-    || children.some((c) => isActiveNav(location, c));
+    || children.some((c) =>
+      inApp ? isActiveNav(location, c, { ignoreHostGate: true }) : isActiveNav(location, c),
+    );
 
   const labelClass = `px-2.5 py-1.5 rounded-lg text-[13px] whitespace-nowrap transition-all duration-150 ${
     anyActive
@@ -61,7 +73,7 @@ export function NavDisclosure({ item, crossOriginHref }: NavDisclosureProps) {
       );
     }
     return (
-      <Link to={item.path} className={labelClass} aria-current={parentActive ? 'page' : undefined}>
+      <Link to={inApp ? inApp(item) : item.path} className={labelClass} aria-current={parentActive ? 'page' : undefined}>
         {item.label} <span aria-hidden="true">▸</span>
       </Link>
     );
@@ -101,7 +113,9 @@ export function NavDisclosure({ item, crossOriginHref }: NavDisclosureProps) {
           >
             {children.map((child) => {
               const href = crossOriginHref(child);
-              const childActive = isActiveNav(location, child);
+              const childActive = inApp
+                ? isActiveNav(location, child, { ignoreHostGate: true })
+                : isActiveNav(location, child);
               const childClass = `block px-3 py-2 rounded-lg text-[13px] whitespace-nowrap transition-all duration-150 ${
                 childActive
                   ? 'bg-accent/15 text-accent font-semibold'
@@ -124,7 +138,7 @@ export function NavDisclosure({ item, crossOriginHref }: NavDisclosureProps) {
               return (
                 <Link
                   key={child.path}
-                  to={child.path}
+                  to={inApp ? inApp(child) : child.path}
                   className={childClass}
                   onClick={() => setOpen(false)}
                   role="menuitem"

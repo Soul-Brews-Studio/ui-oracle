@@ -1,15 +1,24 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BasePathProvider } from '@ui-oracle/shared-ui';
 import Schedule from './pages/Schedule';
 import { Header } from './components/Header';
+
+export function ScheduleRoutes() {
+  return (
+    <Routes>
+      <Route index element={<Schedule />} />
+      <Route path="*" element={<Schedule />} />
+    </Routes>
+  );
+}
 
 export default function App() {
   return (
     <BrowserRouter>
-      <Header />
-      <Routes>
-        <Route path="/" element={<Schedule />} />
-        <Route path="*" element={<Schedule />} />
-      </Routes>
+      <BasePathProvider value="">
+        <Header />
+        <ScheduleRoutes />
+      </BasePathProvider>
     </BrowserRouter>
   );
 }

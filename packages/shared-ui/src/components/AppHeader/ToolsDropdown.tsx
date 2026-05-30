@@ -7,17 +7,27 @@ interface ToolsDropdownProps {
   items: NavItem[];
   crossOriginHref: CrossOriginResolver;
   label?: string;
+  /** Combined single-origin bundle mode. Opt-in; default false. */
+  combinedMode?: boolean;
+  /** In-app href resolver for combined bundles. When provided, the in-app
+   *  <Link> targets inAppHref(item) instead of item.path. Opt-in. */
+  inAppHref?: (item: NavItem) => string;
 }
 
 /**
  * Hover-triggered "Tools ▾" dropdown. Renders internal or cross-origin links
  * via `crossOriginHref(item)`.
  */
-export function ToolsDropdown({ items, crossOriginHref, label = 'Tools ▾' }: ToolsDropdownProps) {
+export function ToolsDropdown({ items, crossOriginHref, label = 'Tools ▾', combinedMode = false, inAppHref }: ToolsDropdownProps) {
   const location = useLocation();
   const [open, setOpen] = useState(false);
 
-  const anyActive = items.some((t) => isActiveNav(location, t));
+  // In combined single-origin bundles, resolve in-app targets via inAppHref.
+  const inApp = combinedMode && inAppHref ? inAppHref : undefined;
+
+  const anyActive = items.some((t) =>
+    inApp ? isActiveNav(location, t, { ignoreHostGate: true }) : isActiveNav(location, t),
+  );
 
   return (
     <div
@@ -47,7 +57,9 @@ export function ToolsDropdown({ items, crossOriginHref, label = 'Tools ▾' }: T
       >
         {items.map((item) => {
           const href = crossOriginHref(item);
-          const active = isActiveNav(location, item);
+          const active = inApp
+            ? isActiveNav(location, item, { ignoreHostGate: true })
+            : isActiveNav(location, item);
           const cls = `block px-3 py-2 rounded-lg text-[13px] whitespace-nowrap transition-all duration-150 ${
             active
               ? 'bg-accent/15 text-accent font-semibold'
@@ -60,8 +72,9 @@ export function ToolsDropdown({ items, crossOriginHref, label = 'Tools ▾' }: T
               </a>
             );
           }
+          const to = inApp ? inApp(item) : item.path;
           return (
-            <Link key={item.path} to={item.path} className={cls} onClick={() => setOpen(false)} role="menuitem" aria-current={active ? 'page' : undefined}>
+            <Link key={item.path} to={to} className={cls} onClick={() => setOpen(false)} role="menuitem" aria-current={active ? 'page' : undefined}>
               {item.label}
             </Link>
           );

@@ -39,15 +39,19 @@ export function isActivePath(location: Location, path: string): boolean {
 export function isActiveNav(
   location: Location,
   item: { path: string; studio?: string; query?: Record<string, string> },
+  opts?: { ignoreHostGate?: boolean; base?: string },
 ): boolean {
-  if (item.studio) {
+  const ignoreHostGate = opts?.ignoreHostGate === true;
+  if (item.studio && !ignoreHostGate) {
     if (typeof window === 'undefined') return false;
     const hostMatch = window.location.hostname === item.studio
       || window.location.hostname.endsWith('.' + item.studio);
     if (!hostMatch) return false;
   }
 
-  const itemPath = item.path.split('?')[0];
+  const itemPath = ignoreHostGate
+    ? (opts?.base ?? '') + item.path.split('?')[0]
+    : item.path.split('?')[0];
   if (location.pathname !== itemPath) return false;
 
   if (item.query) {

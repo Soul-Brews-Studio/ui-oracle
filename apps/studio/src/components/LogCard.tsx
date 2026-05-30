@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { AppLink as Link } from '@ui-oracle/shared-ui';
 import type { Document } from '../api/oracle';
 import { getDocDisplayInfo } from '../utils/docDisplay';
 import styles from './LogCard.module.css';

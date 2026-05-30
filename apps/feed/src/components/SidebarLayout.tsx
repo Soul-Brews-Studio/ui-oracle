@@ -1,4 +1,5 @@
-import { Link, useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
+import { AppLink as Link, useBase, withBase } from '@ui-oracle/shared-ui';
 
 const DEFAULT_TYPES = [
   { key: 'all', label: 'All' },
@@ -45,6 +46,7 @@ export function SidebarLayout({
   navItems,
 }: SidebarLayoutProps) {
   const location = useLocation();
+  const base = useBase();
 
   return (
     <div className="max-w-[900px] mx-auto px-6 py-8 max-md:px-3 max-md:py-4">
@@ -57,7 +59,7 @@ export function SidebarLayout({
                 key={item.path}
                 to={item.path}
                 className={`px-3 py-1.5 rounded-lg text-[13px] transition-all duration-150 ${
-                  location.pathname === item.path
+                  location.pathname === withBase(base, item.path)
                     ? 'bg-bg-card text-accent font-medium'
                     : 'text-text-secondary hover:bg-bg-card hover:text-text-primary'
                 }`}

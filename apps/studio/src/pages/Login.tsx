@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavTo } from '@ui-oracle/shared-ui';
 import { useAuth } from '../contexts/AuthContext';
 
 export function Login() {
@@ -7,7 +7,7 @@ export function Login() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
-  const navigate = useNavigate();
+  const navigate = useNavTo();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

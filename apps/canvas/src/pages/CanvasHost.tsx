@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
+import { AppLink as Link } from '@ui-oracle/shared-ui';
 import * as THREE from 'three';
 import {
   DEFAULT_PLUGIN_ID,

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Link, useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
+import { AppLink as Link, useNavTo } from '@ui-oracle/shared-ui';
 import { API_BASE } from '../api/oracle';
 import { Spinner } from '../components/ui/Spinner';
 
@@ -37,7 +38,7 @@ function formatTime(ts: string | number | undefined): string {
 
 export function Sessions() {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
+  const navigate = useNavTo();
   const [sessions, setSessions] = useState<SessionSummary[]>([]);
   const [context, setContext] = useState<SessionContext | null>(null);
   const [loading, setLoading] = useState(true);

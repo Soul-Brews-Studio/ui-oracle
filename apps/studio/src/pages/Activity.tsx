@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
+import { AppLink as Link } from '@ui-oracle/shared-ui';
 import { getDashboardSummary, getDashboardActivity, getDashboardGrowth } from '../api/oracle';
 import type { DashboardSummary, DashboardActivity, DashboardGrowth } from '../api/oracle';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts';

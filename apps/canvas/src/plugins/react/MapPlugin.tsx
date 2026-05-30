@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { KnowledgeMap } from 'knowledge-map-3d';
+import { useBase, useNavTo, withBase } from '@ui-oracle/shared-ui';
 import { usePlanetsData } from '../../hooks/usePlanetsData';
 import { usePlanetsSearch } from '../../hooks/usePlanetsSearch';
 import { PlanetsLoading, PlanetsEmpty } from '../../components/planets/PlanetsEmpty';
@@ -9,6 +10,8 @@ import { TYPE_COLORS } from '../../lib/type-colors';
 export function MapPlugin() {
   const data = usePlanetsData();
   const search = usePlanetsSearch();
+  const base = useBase();
+  const navigate = useNavTo();
   const [visibleTypes, setVisibleTypes] = useState<Set<string>>(() => new Set(Object.keys(TYPE_COLORS)));
 
   const filteredDocs = useMemo(
@@ -36,7 +39,11 @@ export function MapPlugin() {
         nebulae={data.nebulae}
         highlightIds={search.matchIds}
         onDocumentClick={(doc) => {
-          window.location.href = `/doc/${encodeURIComponent(doc.id)}`;
+          if (base) {
+            navigate(withBase(base, `/studio/doc/${encodeURIComponent(doc.id)}`));
+          } else {
+            window.location.href = `/doc/${encodeURIComponent(doc.id)}`;
+          }
         }}
         typeColors={TYPE_COLORS}
         embedded

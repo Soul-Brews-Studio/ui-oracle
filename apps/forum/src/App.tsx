@@ -1,15 +1,24 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BasePathProvider } from '@ui-oracle/shared-ui';
 import { Forum } from './pages/Forum';
 import { Header } from './components/Header';
+
+export function ForumRoutes() {
+  return (
+    <Routes>
+      <Route index element={<Forum />} />
+      <Route path="*" element={<Forum />} />
+    </Routes>
+  );
+}
 
 export default function App() {
   return (
     <BrowserRouter>
-      <Header />
-      <Routes>
-        <Route path="/" element={<Forum />} />
-        <Route path="*" element={<Forum />} />
-      </Routes>
+      <BasePathProvider value="">
+        <Header />
+        <ForumRoutes />
+      </BasePathProvider>
     </BrowserRouter>
   );
 }

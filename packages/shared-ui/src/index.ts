@@ -31,6 +31,9 @@ export { SubNav } from './components/SubNav';
 export type { SubNavItem } from './components/SubNav';
 export { PageShell } from './components/PageShell';
 
+// Base-path routing (combined single-origin bundle; identity when standalone)
+export { BasePathProvider, useBase, withBase, AppLink, useNavTo } from './base-path';
+
 // Tokens
 export { LAYOUT, CHIP_COLORS } from './tokens';
 

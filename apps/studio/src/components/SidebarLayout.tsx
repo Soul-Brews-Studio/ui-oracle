@@ -1,4 +1,5 @@
-import { Link, useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
+import { AppLink as Link } from '@ui-oracle/shared-ui';
 
 const DEFAULT_TYPES = [
   { key: 'all', label: 'All' },

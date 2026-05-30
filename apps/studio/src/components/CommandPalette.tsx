@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect, memo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavTo } from '@ui-oracle/shared-ui';
 import { search } from '../api/oracle';
 import type { Document } from '../api/oracle';
 import styles from './CommandPalette.module.css';
@@ -39,7 +39,7 @@ export const CommandPalette = memo(function CommandPalette({ onClose }: CommandP
   const inputRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
-  const navigate = useNavigate();
+  const navigate = useNavTo();
 
   useEffect(() => {
     inputRef.current?.focus();

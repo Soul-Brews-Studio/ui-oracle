@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { AppLink as Link } from '@ui-oracle/shared-ui';
 import { search } from '../api/oracle';
 import type { Document } from '../api/oracle';
 
