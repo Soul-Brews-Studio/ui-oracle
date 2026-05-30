@@ -16,7 +16,7 @@ archive/read-only — do not deploy from them.
 ```
 ui-oracle/
 ├── apps/
-│   ├── studio/     ← dashboard (oracle-studio)          → app.buildwithoracle.com
+│   ├── studio/     ← dashboard (oracle-studio)          → studio.buildwithoracle.com
 │   ├── vector/     ← vector playground (vector-oracle-studio) → vector.buildwithoracle.com
 │   └── canvas/     ← canvas plugin host (ui-canvas-oracle-studio) → canvas.buildwithoracle.com
 ├── packages/       ← shared code (shared-ui, etc.) — to be extracted
