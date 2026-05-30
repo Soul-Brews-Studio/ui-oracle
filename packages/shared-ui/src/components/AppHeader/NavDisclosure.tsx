@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import type { CrossOriginResolver, NavItem } from './nav-types';
-import { isActiveNav } from './nav-types';
+import { isActiveInApp, isActiveNav } from './nav-types';
 
 interface NavDisclosureProps {
   item: NavItem;
@@ -41,11 +41,11 @@ export function NavDisclosure({ item, crossOriginHref, combinedMode = false, inA
   const parentHref = inApp ? null : crossOriginHref(item);
   const hasRealPath = item.path && item.path !== '#';
   const parentActive = inApp
-    ? isActiveNav(location, item, { ignoreHostGate: true })
+    ? isActiveInApp(location.pathname, inApp(item))
     : isActiveNav(location, item);
   const anyActive = parentActive
     || children.some((c) =>
-      inApp ? isActiveNav(location, c, { ignoreHostGate: true }) : isActiveNav(location, c),
+      inApp ? isActiveInApp(location.pathname, inApp(c)) : isActiveNav(location, c),
     );
 
   const labelClass = `px-2.5 py-1.5 rounded-lg text-[13px] whitespace-nowrap transition-all duration-150 ${
@@ -115,7 +115,7 @@ export function NavDisclosure({ item, crossOriginHref, combinedMode = false, inA
             {children.map((child) => {
               const href = inApp ? null : crossOriginHref(child);
               const childActive = inApp
-                ? isActiveNav(location, child, { ignoreHostGate: true })
+                ? isActiveInApp(location.pathname, inApp(child))
                 : isActiveNav(location, child);
               const childClass = `block px-3 py-2 rounded-lg text-[13px] whitespace-nowrap transition-all duration-150 ${
                 childActive
