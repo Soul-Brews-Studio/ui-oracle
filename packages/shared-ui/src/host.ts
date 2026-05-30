@@ -22,10 +22,20 @@ const RECENT_LIMIT = 8;
 const ENV_DEFAULT =
   typeof import.meta !== 'undefined' &&
   (import.meta as { env?: { VITE_DEFAULT_HOST?: string } }).env?.VITE_DEFAULT_HOST;
+// Deployed public hosts (Cloudflare custom domains / *.workers.dev) can never
+// reach a :47778 backend on their own origin — the thin client's backend always
+// runs on the user's own machine. So default those to localhost. On LAN
+// hostnames (m5.wg, mba.local, a bare IP, …) keep deriving from the page so
+// peer / multi-machine setups still work without per-peer config.
+function isDeployedPublicHost(h: string): boolean {
+  return h.endsWith('.buildwithoracle.com') || h.endsWith('.workers.dev');
+}
 const DEFAULT_HOST: string =
   ENV_DEFAULT ||
   (typeof window !== 'undefined'
-    ? `${window.location.protocol}//${window.location.hostname}:47778`
+    ? isDeployedPublicHost(window.location.hostname)
+      ? 'http://localhost:47778'
+      : `${window.location.protocol}//${window.location.hostname}:47778`
     : 'http://localhost:47778');
 
 const params =

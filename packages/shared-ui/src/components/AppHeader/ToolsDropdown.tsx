@@ -56,7 +56,8 @@ export function ToolsDropdown({ items, crossOriginHref, label = 'Tools ▾', com
         role="menu"
       >
         {items.map((item) => {
-          const href = crossOriginHref(item);
+          // Combined bundle: never bounce cross-origin — stay in-app via inApp(item).
+          const href = inApp ? null : crossOriginHref(item);
           const active = inApp
             ? isActiveNav(location, item, { ignoreHostGate: true })
             : isActiveNav(location, item);
