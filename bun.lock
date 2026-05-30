@@ -6,10 +6,10 @@
       "name": "ui-oracle",
     },
     "apps/all": {
-      "name": "@soul-brews-studio/all-oracle-studio",
+      "name": "@soul-brews-studio/arra-oracle-studio",
       "version": "0.1.0",
       "bin": {
-        "all-oracle-studio": "./bin/serve.ts",
+        "arra-oracle-studio": "./bin/serve.ts",
       },
       "devDependencies": {
         "@dnd-kit/core": "^6.3.1",
@@ -428,7 +428,7 @@
 
     "@rollup/rollup-win32-x64-msvc": ["@rollup/rollup-win32-x64-msvc@4.60.2", "", { "os": "win32", "cpu": "x64" }, "sha512-Nd/SgG27WoA9e+/TdK74KnHz852TLa94ovOYySo/yMPuTmpckK/jIF2jSwS3g7ELSKXK13/cVdmg1Z/DaCWKxA=="],
 
-    "@soul-brews-studio/all-oracle-studio": ["@soul-brews-studio/all-oracle-studio@workspace:apps/all"],
+    "@soul-brews-studio/arra-oracle-studio": ["@soul-brews-studio/arra-oracle-studio@workspace:apps/all"],
 
     "@standard-schema/spec": ["@standard-schema/spec@1.1.0", "", {}, "sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w=="],
 

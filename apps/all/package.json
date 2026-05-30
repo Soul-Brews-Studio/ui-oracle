@@ -1,5 +1,5 @@
 {
-  "name": "@soul-brews-studio/all-oracle-studio",
+  "name": "@soul-brews-studio/arra-oracle-studio",
   "version": "0.1.0",
   "type": "module",
   "description": "ARRA 🔮Racle — the combined Oracle hub (studio + vector + canvas + feed + forum + schedule + indexer) in one bundle. Run it locally with a static server + /api proxy to your local arra-oracle backend.",
@@ -11,7 +11,7 @@
     "spa"
   ],
   "bin": {
-    "all-oracle-studio": "./bin/serve.ts"
+    "arra-oracle-studio": "./bin/serve.ts"
   },
   "files": [
     "bin/",
