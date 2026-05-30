@@ -21,7 +21,10 @@ export const SUBDOMAIN_TO_BASE: Record<string, string> = {
  * `query` appended as `?k=v`.
  */
 export function inAppHref(item: NavItem): string {
-  const base = (item.studio ? SUBDOMAIN_TO_BASE[item.studio] : undefined) ?? '';
+  // Items without a mapped `studio` host belong to studio (the hub that owns the
+  // shared tools/routes — Pulse, Traces, Sessions, …), so default to the /studio
+  // section rather than top-level, where those routes don't exist.
+  const base = (item.studio && SUBDOMAIN_TO_BASE[item.studio]) || '/studio';
   let href = base + item.path;
 
   if (item.query) {

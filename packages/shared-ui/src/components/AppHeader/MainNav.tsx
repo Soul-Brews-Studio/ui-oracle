@@ -38,7 +38,8 @@ export function MainNav({ items, crossOriginHref, combinedMode = false, inAppHre
             />
           );
         }
-        const href = crossOriginHref(item);
+        // Combined bundle: never bounce cross-origin — stay in-app via inApp(item).
+        const href = inApp ? null : crossOriginHref(item);
         const active = inApp
           ? isActiveNav(location, item, { ignoreHostGate: true })
           : isActiveNav(location, item);

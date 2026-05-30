@@ -37,7 +37,8 @@ export function NavDisclosure({ item, crossOriginHref, combinedMode = false, inA
   }, []);
 
   const children = item.children ?? [];
-  const parentHref = crossOriginHref(item);
+  // Combined bundle: never bounce cross-origin — stay in-app via inApp(item).
+  const parentHref = inApp ? null : crossOriginHref(item);
   const hasRealPath = item.path && item.path !== '#';
   const parentActive = inApp
     ? isActiveNav(location, item, { ignoreHostGate: true })
@@ -112,7 +113,7 @@ export function NavDisclosure({ item, crossOriginHref, combinedMode = false, inA
             role="menu"
           >
             {children.map((child) => {
-              const href = crossOriginHref(child);
+              const href = inApp ? null : crossOriginHref(child);
               const childActive = inApp
                 ? isActiveNav(location, child, { ignoreHostGate: true })
                 : isActiveNav(location, child);
