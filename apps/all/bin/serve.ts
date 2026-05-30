@@ -36,8 +36,9 @@ Options:
   process.exit(0);
 }
 
-const PORT = parseInt(getArg('--port', '3000'), 10);
-const API_URL = getArg('--api', 'http://localhost:47778');
+// Flags win; then env (PORT / ORACLE_API_URL — 12-factor + Docker friendly); then defaults.
+const PORT = parseInt(getArg('--port', process.env.PORT || '3000'), 10);
+const API_URL = getArg('--api', process.env.ORACLE_API_URL || 'http://localhost:47778');
 const DIST = join(import.meta.dirname, '..', 'dist');
 
 if (!existsSync(DIST)) {
