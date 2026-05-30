@@ -1,0 +1,21 @@
+# Deps + build artifacts — reinstalled / rebuilt inside the image
+node_modules
+**/node_modules
+**/dist
+**/.wrangler
+**/.tmp
+**/*.tsbuildinfo
+
+# VCS + editor + OS
+.git
+.github
+**/.DS_Store
+**/*.log
+
+# Oracle vault / memory — not needed for the build
+"ψ"
+ψ
+
+# Misc
+**/.env
+**/.env.*
