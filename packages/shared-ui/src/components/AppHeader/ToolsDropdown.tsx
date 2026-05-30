@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import type { CrossOriginResolver, NavItem } from './nav-types';
-import { isActiveNav } from './nav-types';
+import { isActiveInApp, isActiveNav } from './nav-types';
 
 interface ToolsDropdownProps {
   items: NavItem[];
@@ -26,7 +26,7 @@ export function ToolsDropdown({ items, crossOriginHref, label = 'Tools ▾', com
   const inApp = combinedMode && inAppHref ? inAppHref : undefined;
 
   const anyActive = items.some((t) =>
-    inApp ? isActiveNav(location, t, { ignoreHostGate: true }) : isActiveNav(location, t),
+    inApp ? isActiveInApp(location.pathname, inApp(t)) : isActiveNav(location, t),
   );
 
   return (
@@ -59,7 +59,7 @@ export function ToolsDropdown({ items, crossOriginHref, label = 'Tools ▾', com
           // Combined bundle: never bounce cross-origin — stay in-app via inApp(item).
           const href = inApp ? null : crossOriginHref(item);
           const active = inApp
-            ? isActiveNav(location, item, { ignoreHostGate: true })
+            ? isActiveInApp(location.pathname, inApp(item))
             : isActiveNav(location, item);
           const cls = `block px-3 py-2 rounded-lg text-[13px] whitespace-nowrap transition-all duration-150 ${
             active

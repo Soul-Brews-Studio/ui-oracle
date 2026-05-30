@@ -64,6 +64,20 @@ export function isActiveNav(
   return true;
 }
 
+/**
+ * Active-state for combined single-origin bundles. Compares the current pathname
+ * to an item's ALREADY-RESOLVED in-app href (the app's inAppHref output), which is
+ * section-aware: active on the section's own path and any sub-path. The root ("/")
+ * is active ONLY on an exact "/", so studio-at-root doesn't light up every sibling
+ * whose menu `path` is "/" (Feed/Forum/Canvas/Schedule/Vector all carry path "/").
+ */
+export function isActiveInApp(pathname: string, resolvedHref: string): boolean {
+  const target = resolvedHref.split('?')[0].replace(/\/+$/, '') || '/';
+  const cur = pathname.replace(/\/+$/, '') || '/';
+  if (target === '/' || target === '#') return cur === target;
+  return cur === target || cur.startsWith(target + '/');
+}
+
 type OrderedNavItem = NavItem & { order: number };
 
 export function buildNavSet(items: MenuApiItem[]): NavSet {

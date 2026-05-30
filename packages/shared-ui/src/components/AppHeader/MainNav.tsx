@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import type { CrossOriginResolver, NavItem } from './nav-types';
-import { isActiveNav } from './nav-types';
+import { isActiveInApp, isActiveNav } from './nav-types';
 import { NavDisclosure } from './NavDisclosure';
 
 interface MainNavProps {
@@ -38,10 +38,11 @@ export function MainNav({ items, crossOriginHref, combinedMode = false, inAppHre
             />
           );
         }
+        const to = inApp ? inApp(item) : item.path;
         // Combined bundle: never bounce cross-origin — stay in-app via inApp(item).
         const href = inApp ? null : crossOriginHref(item);
         const active = inApp
-          ? isActiveNav(location, item, { ignoreHostGate: true })
+          ? isActiveInApp(location.pathname, to)
           : isActiveNav(location, item);
         const cls = `px-2.5 py-1.5 rounded-lg text-[13px] whitespace-nowrap transition-all duration-150 ${
           active
@@ -55,7 +56,6 @@ export function MainNav({ items, crossOriginHref, combinedMode = false, inAppHre
             </a>
           );
         }
-        const to = inApp ? inApp(item) : item.path;
         return (
           <Link key={item.path} to={to} className={cls} aria-current={active ? 'page' : undefined}>
             {item.label}
