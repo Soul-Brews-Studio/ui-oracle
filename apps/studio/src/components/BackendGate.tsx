@@ -87,7 +87,7 @@ function UnreachableLanding({ onRetry }: { onRetry: () => void }) {
           />
           <InstallCard
             label="3. Studio (this UI, served locally)"
-            command="bunx @soul-brews-studio/oracle-studio"
+            command="bunx @soul-brews-studio/arra-oracle-studio"
           />
         </div>
 

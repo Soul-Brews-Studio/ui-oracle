@@ -318,6 +318,7 @@ export function Map() {
     function onMouseDown(e: MouseEvent) {
       isDragging.current = true;
       dragStart.current = { x: e.clientX, y: e.clientY };
+      container!.style.cursor = 'grabbing';
     }
 
     function onMouseUp(e: MouseEvent) {
@@ -337,6 +338,7 @@ export function Map() {
         }
       }
       isDragging.current = false;
+      container!.style.cursor = 'grab';
     }
 
     function onMouseMove(e: MouseEvent) {
@@ -349,22 +351,11 @@ export function Map() {
         const dy = e.clientY - dragStart.current.y;
         targetAngleX.current = camAngleX.current.x + dx * 0.005;
         targetAngleY.current = Math.max(-1.2, Math.min(1.2, camAngleY.current.x - dy * 0.005));
-        return;
       }
-
-      mouse.x = mouseNDC.current.x;
-      mouse.y = mouseNDC.current.y;
-      raycaster.setFromCamera(mouse, camera);
-      const intersects = raycaster.intersectObjects(meshes);
-
-      if (intersects.length > 0) {
-        const doc = intersects[0].object.userData.doc as MapDocument;
-        setHoveredDoc(doc);
-        container!.style.cursor = 'pointer';
-      } else {
-        setHoveredDoc(null);
-        container!.style.cursor = isDragging.current ? 'grabbing' : 'grab';
-      }
+      // NOTE: hover detection (which dot is under the cursor) is derived in the
+      // animation loop from the node projections it already computes each frame.
+      // Raycasting all ~2,900 meshes on every mousemove (100+/s on a fast mouse)
+      // was the cause of the hover-while-turning lag.
     }
 
     function onWheel(e: WheelEvent) {
@@ -434,6 +425,10 @@ export function Map() {
     const dt = 1 / 60;
     const tempVec = new THREE.Vector3();
     const aspectRatio = width / height;
+    // Hover is derived in-loop (no per-mousemove raycast). Only push to React
+    // when the dot under the cursor actually changes.
+    let lastHoverId: string | null = null;
+    const HOVER_DIST = 0.025; // screen-space radius treated as "cursor on this dot"
 
     function animate() {
       time += 0.016;
@@ -578,6 +573,19 @@ export function Map() {
           el.style.display = '';
         } else {
           el.style.display = 'none';
+        }
+      }
+
+      // Derive hover from the nearest projected node (reuses the work above —
+      // no raycast). Push to React state + cursor only on change.
+      if (!isDragging.current) {
+        const top = nearby.length > 0 ? nearby[0] : null;
+        const hoverDoc = top && top.screenDist < HOVER_DIST ? top.doc : null;
+        const hoverId = hoverDoc ? hoverDoc.id : null;
+        if (hoverId !== lastHoverId) {
+          lastHoverId = hoverId;
+          setHoveredDoc(hoverDoc);
+          container!.style.cursor = hoverDoc ? 'pointer' : 'grab';
         }
       }
 
