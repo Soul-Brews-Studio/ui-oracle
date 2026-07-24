@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { BasePathProvider, useBase, withBase } from '@ui-oracle/shared-ui';
+import { BasePathProvider, useBase, withBase, BuildFooter } from '@ui-oracle/shared-ui';
 import { Header } from './components/Header';
 
 import { Overview } from './pages/Overview';
@@ -26,9 +26,11 @@ import { Sessions } from './pages/Sessions';
 import { Canvas } from './pages/Canvas';
 import { Planets } from './pages/Planets';
 import { MenuEditor } from './pages/MenuEditor';
+import { Debug } from './pages/Debug';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { getStats } from './api/oracle';
 import { setVaultRepo } from './utils/docDisplay';
+import { installUiErrorCapture } from './lib/ui-error-bus';
 
 // Protected route wrapper
 function RequireAuth({ children }: { children: React.ReactNode }) {
@@ -86,11 +88,25 @@ function StandaloneHeader() {
  */
 export function StudioRoutes({ header = false }: { header?: boolean }) {
   useEffect(() => {
+    installUiErrorCapture(); // app-wide client-error capture for HUGINN (/__debug)
     getStats().then(stats => {
       if (stats.vault_repo) setVaultRepo(stats.vault_repo);
     }).catch(() => {});
   }, []);
 
+  return (
+    <Routes>
+      {/* HUGINN — secret observability page. No menu entry (URL-only), and
+          mounted OUTSIDE BackendGate + AuthProvider so it stays reachable even
+          when the backend is down — debugging that is the whole point. */}
+      <Route path="__debug" element={<Debug />} />
+      <Route path="debug" element={<Debug />} />
+      <Route path="*" element={<GatedStudio header={header} />} />
+    </Routes>
+  );
+}
+
+function GatedStudio({ header }: { header: boolean }) {
   return (
     <BackendGate>
       <AuthProvider>
@@ -139,6 +155,7 @@ export default function App() {
     <BrowserRouter>
       <BasePathProvider value="">
         <StudioRoutes header />
+        <BuildFooter />
       </BasePathProvider>
     </BrowserRouter>
   );

@@ -11,11 +11,13 @@ const gitHash = (() => {
   catch { return 'dev' }
 })()
 const appVersion = `v${pkg.version}+${gitHash}`
+const buildDate = new Date().toISOString()
 
 export default defineConfig({
   plugins: [tailwindcss(), react()],
   define: {
     __APP_VERSION__: JSON.stringify(appVersion),
+    __BUILD_DATE__: JSON.stringify(buildDate),
   },
   server: {
     port: 5181,
