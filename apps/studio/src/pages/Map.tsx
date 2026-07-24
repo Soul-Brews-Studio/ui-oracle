@@ -114,7 +114,9 @@ export function Map() {
   const matchIdsRef = useRef<Set<string>>(new Set());
   const hoveredDocRef = useRef<MapDocument | null>(null);
   const animRef = useRef<number>(0);
-  const meshesRef = useRef<THREE.Mesh[]>([]);
+  // Flat list of every node's static base position + doc, for the "center on
+  // visible" button (raycast/hover no longer use per-doc THREE.Mesh objects).
+  const nodesRef = useRef<{ basePos: THREE.Vector3; doc: MapDocument }[]>([]);
   const sceneRef = useRef<THREE.Scene | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
@@ -244,11 +246,66 @@ export function Map() {
     const stars = new THREE.Points(starGeo, starMat);
     scene.add(stars);
 
-    // Shared geometry
+    // Shared base geometry (cloned per globe so each can carry its own
+    // per-instance attribute arrays).
     const nodeGeometry = new THREE.SphereGeometry(0.05, 10, 10);
-    const meshes: THREE.Mesh[] = [];
     const globeMeshes: THREE.LineSegments[] = [];
     const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    // Reusable scratch object for composing per-instance matrices.
+    const instDummy = new THREE.Object3D();
+
+    // MeshStandardMaterial exposes no per-instance emissive / opacity / colour.
+    // Inject three instanced attributes into the shader instead:
+    //   aInstColor (vec3)  -> diffuse tint + emissive glow colour (== old color)
+    //   aEmissive  (float) -> per-instance emissive intensity (glow)
+    //   aAlpha     (float) -> per-instance opacity (search fade)
+    function makeInstancedDocMaterial(): THREE.MeshStandardMaterial {
+      const material = new THREE.MeshStandardMaterial({
+        color: 0xffffff,
+        metalness: 0.3,
+        roughness: 0.2,
+        transparent: true,
+        opacity: 1.0,
+      });
+      material.onBeforeCompile = (shader) => {
+        shader.vertexShader =
+          'attribute vec3 aInstColor;\nattribute float aEmissive;\nattribute float aAlpha;\n' +
+          'varying vec3 vInstColor;\nvarying float vEmissive;\nvarying float vAlpha;\n' +
+          shader.vertexShader.replace(
+            '#include <begin_vertex>',
+            '#include <begin_vertex>\n\tvInstColor = aInstColor;\n\tvEmissive = aEmissive;\n\tvAlpha = aAlpha;',
+          );
+        shader.fragmentShader =
+          'varying vec3 vInstColor;\nvarying float vEmissive;\nvarying float vAlpha;\n' +
+          shader.fragmentShader
+            .replace(
+              '#include <color_fragment>',
+              '#include <color_fragment>\n\tdiffuseColor.rgb *= vInstColor;\n\tdiffuseColor.a *= vAlpha;',
+            )
+            .replace(
+              '#include <emissivemap_fragment>',
+              '#include <emissivemap_fragment>\n\ttotalEmissiveRadiance += vInstColor * vEmissive;',
+            );
+      };
+      return material;
+    }
+
+    // One InstancedMesh per globe (globes are few: 1..4). Each record keeps the
+    // per-instance state the animate loop mutates every frame.
+    interface GlobeInstanced {
+      mesh: THREE.InstancedMesh;
+      docs: MapDocument[];
+      basePositions: THREE.Vector3[];
+      baseScales: Float32Array;
+      emissiveArr: Float32Array;
+      alphaArr: Float32Array;
+      emissiveAttr: THREE.InstancedBufferAttribute;
+      alphaAttr: THREE.InstancedBufferAttribute;
+    }
+    const globeInstanced: GlobeInstanced[] = [];
+    const instancedMeshes: THREE.InstancedMesh[] = [];
+    const nodes: { basePos: THREE.Vector3; doc: MapDocument }[] = [];
 
     // Create globes and their document clouds
     globes.forEach((globe) => {
@@ -282,34 +339,63 @@ export function Map() {
         });
       }
 
-      // Nodes for this globe
-      globe.documents.forEach((doc, i) => {
-        const color = TYPE_COLORS_NUM[doc.type] || TYPE_COLORS_NUM.unknown;
-        const baseScale = ageScale(doc.created_at);
-        const material = new THREE.MeshStandardMaterial({
-          color,
-          metalness: 0.3,
-          roughness: 0.2,
-          emissive: color,
-          emissiveIntensity: 0.8,
-          transparent: true,
-          opacity: 1.0,
-        });
+      // Nodes for this globe — one InstancedMesh, all docs as instances.
+      const docs = globe.documents;
+      const count = docs.length;
+      const cap = Math.max(1, count);
+      const geometry = nodeGeometry.clone();
+      const material = makeInstancedDocMaterial();
+      const mesh = new THREE.InstancedMesh(geometry, material, cap);
+      mesh.count = count;
+      mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+      mesh.frustumCulled = false;
 
-        const mesh = new THREE.Mesh(nodeGeometry, material);
+      const colorArr = new Float32Array(cap * 3);
+      const emissiveArr = new Float32Array(cap);
+      const alphaArr = new Float32Array(cap);
+      const baseScales = new Float32Array(cap);
+      const basePositions: THREE.Vector3[] = [];
+      const col = new THREE.Color();
+
+      for (let i = 0; i < count; i++) {
+        const doc = docs[i];
+        const colorNum = TYPE_COLORS_NUM[doc.type] || TYPE_COLORS_NUM.unknown;
+        baseScales[i] = ageScale(doc.created_at);
+        col.setHex(colorNum);
+        colorArr[i * 3] = col.r;
+        colorArr[i * 3 + 1] = col.g;
+        colorArr[i * 3 + 2] = col.b;
+        emissiveArr[i] = 0.8;
+        alphaArr[i] = 1.0;
         const z = doc.z != null ? doc.z : (xxhash(7, i) - 0.5) * 2;
         const basePos = new THREE.Vector3(
           globe.center.x + doc.x * 8,
           globe.center.y + doc.y * 8,
           globe.center.z + z * 8,
         );
-        mesh.position.copy(basePos);
-        mesh.userData = { doc, basePos, baseScale, globeKey: globe.key };
-        scene.add(mesh);
-        meshes.push(mesh);
-      });
+        basePositions.push(basePos);
+        nodes.push({ basePos, doc });
+        instDummy.position.copy(basePos);
+        instDummy.scale.setScalar(baseScales[i]);
+        instDummy.rotation.set(0, 0, 0);
+        instDummy.updateMatrix();
+        mesh.setMatrixAt(i, instDummy.matrix);
+      }
+
+      const emissiveAttr = new THREE.InstancedBufferAttribute(emissiveArr, 1);
+      const alphaAttr = new THREE.InstancedBufferAttribute(alphaArr, 1);
+      emissiveAttr.setUsage(THREE.DynamicDrawUsage);
+      alphaAttr.setUsage(THREE.DynamicDrawUsage);
+      geometry.setAttribute('aInstColor', new THREE.InstancedBufferAttribute(colorArr, 3));
+      geometry.setAttribute('aEmissive', emissiveAttr);
+      geometry.setAttribute('aAlpha', alphaAttr);
+      mesh.instanceMatrix.needsUpdate = true;
+      scene.add(mesh);
+
+      globeInstanced.push({ mesh, docs, basePositions, baseScales, emissiveArr, alphaArr, emissiveAttr, alphaAttr });
+      instancedMeshes.push(mesh);
     });
-    meshesRef.current = meshes;
+    nodesRef.current = nodes;
 
     // Raycaster
     const raycaster = new THREE.Raycaster();
@@ -331,10 +417,14 @@ export function Map() {
         mouse.x = ((e.clientX - rect.left) / width) * 2 - 1;
         mouse.y = -((e.clientY - rect.top) / height) * 2 + 1;
         raycaster.setFromCamera(mouse, camera);
-        const intersects = raycaster.intersectObjects(meshes);
+        const intersects = raycaster.intersectObjects(instancedMeshes);
         if (intersects.length > 0) {
-          const doc = intersects[0].object.userData.doc as MapDocument;
-          navigate(`/doc/${encodeURIComponent(doc.id)}`);
+          const hit = intersects[0];
+          const rec = globeInstanced.find(r => r.mesh === hit.object);
+          if (rec && hit.instanceId != null) {
+            const doc = rec.docs[hit.instanceId];
+            if (doc) navigate(`/doc/${encodeURIComponent(doc.id)}`);
+          }
         }
       }
       isDragging.current = false;
@@ -503,59 +593,80 @@ export function Map() {
 
       const nearby: { screenDist: number; ndcX: number; ndcY: number; doc: MapDocument; color: string }[] = [];
 
-      meshes.forEach((mesh, i) => {
-        const doc = mesh.userData.doc as MapDocument;
-        const basePos = mesh.userData.basePos as THREE.Vector3;
-        const baseScale = mesh.userData.baseScale as number;
-        const mat = mesh.material as THREE.MeshStandardMaterial;
-        const isHidden = !visTypes.has(doc.type);
-        const isMatched = hasSearch && (matches.has(doc.id) || (doc.chunk_ids?.some(cid => matches.has(cid)) ?? false));
-        const isProjectFiltered = projFilter != null && doc.project !== projFilter && doc.project != null;
-        const isFaded = (hasSearch && !isMatched) || isProjectFiltered;
+      // `flatIndex` reproduces the old across-all-globes mesh index so the
+      // fractal-noise jitter pattern is identical to the per-mesh version.
+      let flatIndex = 0;
+      const emissiveScale = Math.max(0.2, Math.min(1.0, 20 / dist));
+      for (let gi2 = 0; gi2 < globeInstanced.length; gi2++) {
+        const rec = globeInstanced[gi2];
+        const { mesh, docs, basePositions, baseScales, emissiveArr, alphaArr } = rec;
+        const count = docs.length;
+        for (let i = 0; i < count; i++, flatIndex++) {
+          const doc = docs[i];
+          const basePos = basePositions[i];
+          const baseScale = baseScales[i];
+          const isHidden = !visTypes.has(doc.type);
+          const isMatched = hasSearch && (matches.has(doc.id) || (doc.chunk_ids?.some(cid => matches.has(cid)) ?? false));
+          const isProjectFiltered = projFilter != null && doc.project !== projFilter && doc.project != null;
+          const isFaded = (hasSearch && !isMatched) || isProjectFiltered;
 
-        mesh.visible = !isHidden;
-        if (isHidden) return;
+          if (isHidden) {
+            // Collapse hidden instances so they neither render nor raycast.
+            instDummy.position.copy(basePos);
+            instDummy.scale.setScalar(0);
+            instDummy.rotation.set(0, 0, 0);
+            instDummy.updateMatrix();
+            mesh.setMatrixAt(i, instDummy.matrix);
+            continue;
+          }
 
-        if (!prefersReduced) {
-          const t = time * 0.15;
-          const dx = fractalNoise(t + i * 0.17, 2, 42) * 0.12;
-          const dy = fractalNoise(t + i * 0.23, 2, 97) * 0.12;
-          const dz = fractalNoise(t + i * 0.31, 2, 163) * 0.06;
-          mesh.position.set(basePos.x + dx, basePos.y + dy, basePos.z + dz);
+          let px = basePos.x, py = basePos.y, pz = basePos.z;
+          if (!prefersReduced) {
+            const t = time * 0.15;
+            px += fractalNoise(t + flatIndex * 0.17, 2, 42) * 0.12;
+            py += fractalNoise(t + flatIndex * 0.23, 2, 97) * 0.12;
+            pz += fractalNoise(t + flatIndex * 0.31, 2, 163) * 0.06;
+          }
+
+          tempVec.set(px, py, pz).project(camera);
+          const screenDist = Math.sqrt(
+            Math.pow((tempVec.x - mx) * aspectRatio, 2) +
+            Math.pow(tempVec.y - my, 2)
+          );
+          const magnifyRadius = 0.5;
+          const magnifyFactor = screenDist < magnifyRadius
+            ? 1 + 0.6 * Math.pow(1 - screenDist / magnifyRadius, 2)
+            : 1;
+
+          let scale = baseScale * magnifyFactor;
+          if (isMatched) scale *= 1.4;
+          instDummy.position.set(px, py, pz);
+          instDummy.scale.setScalar(scale);
+          instDummy.rotation.set(0, 0, 0);
+          instDummy.updateMatrix();
+          mesh.setMatrixAt(i, instDummy.matrix);
+
+          const baseGlow = isFaded ? 0.1 : 0.5 * emissiveScale;
+          let emissive = baseGlow + (magnifyFactor - 1) * 0.6;
+          if (isMatched) emissive = 1.0 * emissiveScale;
+          if (hovered?.id === doc.id) emissive = 1.2;
+          emissiveArr[i] = emissive;
+          alphaArr[i] = isFaded ? 0.05 : 1.0;
+
+          if (!isFaded && screenDist < 0.5 && tempVec.z < 1) {
+            nearby.push({
+              screenDist,
+              ndcX: tempVec.x,
+              ndcY: tempVec.y,
+              doc,
+              color: TYPE_COLORS[doc.type] || TYPE_COLORS.unknown,
+            });
+          }
         }
-
-        tempVec.copy(mesh.position).project(camera);
-        const screenDist = Math.sqrt(
-          Math.pow((tempVec.x - mx) * aspectRatio, 2) +
-          Math.pow(tempVec.y - my, 2)
-        );
-        const magnifyRadius = 0.5;
-        const magnifyFactor = screenDist < magnifyRadius
-          ? 1 + 0.6 * Math.pow(1 - screenDist / magnifyRadius, 2)
-          : 1;
-
-        let scale = baseScale * magnifyFactor;
-        if (isMatched) scale *= 1.4;
-        mesh.scale.setScalar(scale);
-
-        const emissiveScale = Math.max(0.2, Math.min(1.0, 20 / dist));
-        const baseGlow = isFaded ? 0.1 : 0.5 * emissiveScale;
-        mat.emissiveIntensity = baseGlow + (magnifyFactor - 1) * 0.6;
-        if (isMatched) mat.emissiveIntensity = 1.0 * emissiveScale;
-        if (hovered?.id === doc.id) mat.emissiveIntensity = 1.2;
-
-        mat.opacity = isFaded ? 0.05 : 1.0;
-
-        if (!isFaded && screenDist < 0.5 && tempVec.z < 1) {
-          nearby.push({
-            screenDist,
-            ndcX: tempVec.x,
-            ndcY: tempVec.y,
-            doc,
-            color: TYPE_COLORS[doc.type] || TYPE_COLORS.unknown,
-          });
-        }
-      });
+        mesh.instanceMatrix.needsUpdate = true;
+        rec.emissiveAttr.needsUpdate = true;
+        rec.alphaAttr.needsUpdate = true;
+      }
 
       nearby.sort((a, b) => a.screenDist - b.screenDist);
       for (let li = 0; li < labelPool.length; li++) {
@@ -607,9 +718,11 @@ export function Map() {
       container.removeEventListener('mouseleave', onMouseLeave);
       window.removeEventListener('resize', onResize);
 
-      meshes.forEach((mesh) => {
-        (mesh.material as THREE.Material).dispose();
-        scene.remove(mesh);
+      globeInstanced.forEach((rec) => {
+        scene.remove(rec.mesh);
+        rec.mesh.geometry.dispose();
+        (rec.mesh.material as THREE.Material).dispose();
+        rec.mesh.dispose();
       });
       nodeGeometry.dispose();
       // Dispose globe geometries
@@ -781,10 +894,11 @@ export function Map() {
           >R</button>
           <button
             onClick={() => {
-              const meshes = meshesRef.current;
+              const nodes = nodesRef.current;
+              const visTypes = visibleTypesRef.current;
               let cx = 0, cy = 0, cz = 0, count = 0;
-              meshes.forEach(m => {
-                if (m.visible) { cx += m.position.x; cy += m.position.y; cz += m.position.z; count++; }
+              nodes.forEach(n => {
+                if (visTypes.has(n.doc.type)) { cx += n.basePos.x; cy += n.basePos.y; cz += n.basePos.z; count++; }
               });
               if (count > 0) {
                 targetCenter.current.set(cx / count, cy / count, cz / count);
