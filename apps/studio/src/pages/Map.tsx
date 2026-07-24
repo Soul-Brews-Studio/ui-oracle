@@ -56,26 +56,6 @@ function xxhash(seed: number, data: number): number {
   return (h >>> 0) / 4294967296;
 }
 
-function noise1D(p: number, seed: number): number {
-  const i = Math.floor(p);
-  const f = p - i;
-  const u = f * f * (3 - 2 * f);
-  const g0 = xxhash(seed, i) * 2 - 1;
-  const g1 = xxhash(seed, i + 1) * 2 - 1;
-  return g0 * (1 - u) + g1 * u;
-}
-
-function fractalNoise(p: number, octaves: number, seed: number): number {
-  let f = 0, w = 1, max = 0;
-  for (let i = 0; i < octaves; i++) {
-    f += w * noise1D(p, seed + i);
-    max += w;
-    p *= 2;
-    w *= 0.5;
-  }
-  return f / max;
-}
-
 function ageScale(createdAt: string | null): number {
   if (!createdAt) return 0.7;
   const ageMs = Date.now() - new Date(createdAt).getTime();
@@ -114,6 +94,9 @@ export function Map() {
   const matchIdsRef = useRef<Set<string>>(new Set());
   const hoveredDocRef = useRef<MapDocument | null>(null);
   const animRef = useRef<number>(0);
+  // Rebuilds the STATIC instance matrices + emissive/alpha attributes whenever
+  // search / filter / visibility / hover state changes (NOT per frame).
+  const rebuildRef = useRef<(() => void) | null>(null);
   // Flat list of every node's static base position + doc, for the "center on
   // visible" button (raycast/hover no longer use per-doc THREE.Mesh objects).
   const nodesRef = useRef<{ basePos: THREE.Vector3; doc: MapDocument }[]>([]);
@@ -139,6 +122,15 @@ export function Map() {
   useEffect(() => { hoveredDocRef.current = hoveredDoc; }, [hoveredDoc]);
   useEffect(() => { visibleTypesRef.current = visibleTypes; }, [visibleTypes]);
   useEffect(() => { selectedProjectRef.current = selectedProject; }, [selectedProject]);
+
+  // Any state that changes a dot's static appearance (match-scale, hidden
+  // scale-0, fade, hover glow) rebuilds the instance buffers once — the animate
+  // loop no longer recomputes them every frame.
+  // Rebuild static instance matrices/attributes only on coarse state changes.
+  // NOT on hoveredDoc — the dot under the cursor is already highlighted by the
+  // GPU magnify glow, so hover must not trigger an O(n) rebuild (that was the
+  // per-frame cost we just removed).
+  useEffect(() => { rebuildRef.current?.(); }, [matchIds, visibleTypes, selectedProject]);
 
   const [loadingModel, setLoadingModel] = useState<string | null>(null);
 
@@ -255,11 +247,35 @@ export function Map() {
     // Reusable scratch object for composing per-instance matrices.
     const instDummy = new THREE.Object3D();
 
-    // MeshStandardMaterial exposes no per-instance emissive / opacity / colour.
-    // Inject three instanced attributes into the shader instead:
-    //   aInstColor (vec3)  -> diffuse tint + emissive glow colour (== old color)
-    //   aEmissive  (float) -> per-instance emissive intensity (glow)
-    //   aAlpha     (float) -> per-instance opacity (search fade)
+    // Shader uniform bundles (one per globe material). The animate loop writes
+    // uTime / uMouse / uEmissiveScale / uAspect into these every frame — the
+    // ONLY per-frame work that touches the instance clouds.
+    interface DocUniforms {
+      uTime: { value: number };
+      uMouse: { value: THREE.Vector2 };
+      uAspect: { value: number };
+      uEmissiveScale: { value: number };
+    }
+    const docUniforms: DocUniforms[] = [];
+
+    // MeshStandardMaterial exposes no per-instance emissive / opacity / colour,
+    // and no way to jitter/magnify instances on the GPU. We inject instanced
+    // attributes AND uniforms into the shader so all per-frame per-instance work
+    // (floating jitter + dock-magnify) runs on the vertex shader instead of a
+    // CPU O(n) loop. The animate loop only pokes the uniforms (a handful of
+    // scalars) each frame — never the per-instance buffers.
+    //
+    // Instanced attributes:
+    //   aInstColor      (vec3)  -> diffuse tint + emissive glow colour
+    //   aEmissive       (float) -> unscaled emissive base (faded 0.1 / hover 1.2)
+    //   aEmissiveScaled (float) -> emissive base multiplied by uEmissiveScale (zoom)
+    //   aAlpha          (float) -> per-instance opacity (search fade)
+    //   aSeed           (float) -> per-instance jitter seed
+    //
+    // Uniforms (updated per-frame, ~free):
+    //   uTime, uMouse (NDC), uAspect, uEmissiveScale, uJitterAmp
+    //   uMagnifyRadius (0.5), uMagnifyStrength (0.6)
+    const aspect0 = width / height;
     function makeInstancedDocMaterial(): THREE.MeshStandardMaterial {
       const material = new THREE.MeshStandardMaterial({
         color: 0xffffff,
@@ -269,15 +285,57 @@ export function Map() {
         opacity: 1.0,
       });
       material.onBeforeCompile = (shader) => {
+        shader.uniforms.uTime = { value: 0 };
+        shader.uniforms.uMouse = { value: new THREE.Vector2(10, 10) };
+        shader.uniforms.uAspect = { value: aspect0 };
+        shader.uniforms.uEmissiveScale = { value: 1.0 };
+        shader.uniforms.uJitterAmp = { value: prefersReduced ? 0 : 1 };
+        shader.uniforms.uMagnifyRadius = { value: 0.5 };
+        shader.uniforms.uMagnifyStrength = { value: 0.6 };
+        docUniforms.push(shader.uniforms as unknown as DocUniforms);
+
         shader.vertexShader =
-          'attribute vec3 aInstColor;\nattribute float aEmissive;\nattribute float aAlpha;\n' +
-          'varying vec3 vInstColor;\nvarying float vEmissive;\nvarying float vAlpha;\n' +
-          shader.vertexShader.replace(
-            '#include <begin_vertex>',
-            '#include <begin_vertex>\n\tvInstColor = aInstColor;\n\tvEmissive = aEmissive;\n\tvAlpha = aAlpha;',
-          );
+          'uniform float uTime;\nuniform vec2 uMouse;\nuniform float uAspect;\n' +
+          'uniform float uJitterAmp;\nuniform float uMagnifyRadius;\nuniform float uMagnifyStrength;\n' +
+          'attribute vec3 aInstColor;\nattribute float aEmissive;\nattribute float aEmissiveScaled;\nattribute float aAlpha;\nattribute float aSeed;\n' +
+          'varying vec3 vInstColor;\nvarying float vEmissive;\nvarying float vEmissiveScaled;\nvarying float vAlpha;\nvarying float vMagnify;\n' +
+          shader.vertexShader
+            .replace(
+              '#include <begin_vertex>',
+              '#include <begin_vertex>\n' +
+              '\tvInstColor = aInstColor;\n\tvEmissive = aEmissive;\n\tvEmissiveScaled = aEmissiveScaled;\n\tvAlpha = aAlpha;\n' +
+              // Dock-magnify: project the instance CENTRE to NDC and measure the
+              // aspect-corrected screen distance to the cursor, then grow the
+              // local vertex outward in place (before instanceMatrix is applied
+              // in <project_vertex>).
+              '\tvec4 centerClip = projectionMatrix * modelViewMatrix * instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0);\n' +
+              '\tvec2 centerNdc = centerClip.xy / centerClip.w;\n' +
+              '\tfloat dxm = (centerNdc.x - uMouse.x) * uAspect;\n' +
+              '\tfloat dym = (centerNdc.y - uMouse.y);\n' +
+              '\tfloat sdist = sqrt(dxm * dxm + dym * dym);\n' +
+              '\tfloat magnify = sdist < uMagnifyRadius ? 1.0 + uMagnifyStrength * pow(1.0 - sdist / uMagnifyRadius, 2.0) : 1.0;\n' +
+              '\tvMagnify = magnify;\n' +
+              '\ttransformed *= magnify;\n' +
+              // Per-instance floating jitter (cheap hash + sin, ±0.12 x/y, ±0.06 z).
+              '\tfloat s1 = fract(sin(aSeed * 12.9898) * 43758.5453);\n' +
+              '\tfloat s2 = fract(sin(aSeed * 78.2330) * 43758.5453);\n' +
+              '\tfloat s3 = fract(sin(aSeed * 37.7190) * 43758.5453);\n' +
+              '\tvec3 jitterOffset = uJitterAmp * vec3(\n' +
+              '\t\tsin(uTime * 0.9 + s1 * 6.2831) * 0.12,\n' +
+              '\t\tsin(uTime * 1.1 + s2 * 6.2831) * 0.12,\n' +
+              '\t\tsin(uTime * 0.7 + s3 * 6.2831) * 0.06);',
+            )
+            .replace(
+              '#include <project_vertex>',
+              'vec4 mvPosition = vec4( transformed, 1.0 );\n' +
+              '#ifdef USE_INSTANCING\n\tmvPosition = instanceMatrix * mvPosition;\n#endif\n' +
+              '\tmvPosition.xyz += jitterOffset;\n' +
+              '\tmvPosition = modelViewMatrix * mvPosition;\n' +
+              '\tgl_Position = projectionMatrix * mvPosition;',
+            );
         shader.fragmentShader =
-          'varying vec3 vInstColor;\nvarying float vEmissive;\nvarying float vAlpha;\n' +
+          'uniform float uEmissiveScale;\n' +
+          'varying vec3 vInstColor;\nvarying float vEmissive;\nvarying float vEmissiveScaled;\nvarying float vAlpha;\nvarying float vMagnify;\n' +
           shader.fragmentShader
             .replace(
               '#include <color_fragment>',
@@ -285,7 +343,8 @@ export function Map() {
             )
             .replace(
               '#include <emissivemap_fragment>',
-              '#include <emissivemap_fragment>\n\ttotalEmissiveRadiance += vInstColor * vEmissive;',
+              '#include <emissivemap_fragment>\n' +
+              '\ttotalEmissiveRadiance += vInstColor * (vEmissive + vEmissiveScaled * uEmissiveScale + (vMagnify - 1.0) * 0.6);',
             );
       };
       return material;
@@ -299,13 +358,18 @@ export function Map() {
       basePositions: THREE.Vector3[];
       baseScales: Float32Array;
       emissiveArr: Float32Array;
+      emissiveScaledArr: Float32Array;
       alphaArr: Float32Array;
       emissiveAttr: THREE.InstancedBufferAttribute;
+      emissiveScaledAttr: THREE.InstancedBufferAttribute;
       alphaAttr: THREE.InstancedBufferAttribute;
+      center: THREE.Vector3;
     }
     const globeInstanced: GlobeInstanced[] = [];
     const instancedMeshes: THREE.InstancedMesh[] = [];
     const nodes: { basePos: THREE.Vector3; doc: MapDocument }[] = [];
+    // Monotonic counter across every globe so each instance gets a unique seed.
+    let globalSeed = 0;
 
     // Create globes and their document clouds
     globes.forEach((globe) => {
@@ -352,7 +416,9 @@ export function Map() {
 
       const colorArr = new Float32Array(cap * 3);
       const emissiveArr = new Float32Array(cap);
+      const emissiveScaledArr = new Float32Array(cap);
       const alphaArr = new Float32Array(cap);
+      const seedArr = new Float32Array(cap);
       const baseScales = new Float32Array(cap);
       const basePositions: THREE.Vector3[] = [];
       const col = new THREE.Color();
@@ -365,8 +431,12 @@ export function Map() {
         colorArr[i * 3] = col.r;
         colorArr[i * 3 + 1] = col.g;
         colorArr[i * 3 + 2] = col.b;
-        emissiveArr[i] = 0.8;
+        emissiveArr[i] = 0.0;
+        emissiveScaledArr[i] = 0.5;
         alphaArr[i] = 1.0;
+        // Per-instance jitter seed — a large well-spread number so the GLSL
+        // sin-hash gives each dot a distinct floating phase.
+        seedArr[i] = (globalSeed++) * 0.6180339887 + 1.0;
         const z = doc.z != null ? doc.z : (xxhash(7, i) - 0.5) * 2;
         const basePos = new THREE.Vector3(
           globe.center.x + doc.x * 8,
@@ -383,16 +453,20 @@ export function Map() {
       }
 
       const emissiveAttr = new THREE.InstancedBufferAttribute(emissiveArr, 1);
+      const emissiveScaledAttr = new THREE.InstancedBufferAttribute(emissiveScaledArr, 1);
       const alphaAttr = new THREE.InstancedBufferAttribute(alphaArr, 1);
       emissiveAttr.setUsage(THREE.DynamicDrawUsage);
+      emissiveScaledAttr.setUsage(THREE.DynamicDrawUsage);
       alphaAttr.setUsage(THREE.DynamicDrawUsage);
       geometry.setAttribute('aInstColor', new THREE.InstancedBufferAttribute(colorArr, 3));
       geometry.setAttribute('aEmissive', emissiveAttr);
+      geometry.setAttribute('aEmissiveScaled', emissiveScaledAttr);
       geometry.setAttribute('aAlpha', alphaAttr);
+      geometry.setAttribute('aSeed', new THREE.InstancedBufferAttribute(seedArr, 1));
       mesh.instanceMatrix.needsUpdate = true;
       scene.add(mesh);
 
-      globeInstanced.push({ mesh, docs, basePositions, baseScales, emissiveArr, alphaArr, emissiveAttr, alphaAttr });
+      globeInstanced.push({ mesh, docs, basePositions, baseScales, emissiveArr, emissiveScaledArr, alphaArr, emissiveAttr, emissiveScaledAttr, alphaAttr, center: globe.center });
       instancedMeshes.push(mesh);
     });
     nodesRef.current = nodes;
@@ -519,6 +593,157 @@ export function Map() {
     // when the dot under the cursor actually changes.
     let lastHoverId: string | null = null;
     const HOVER_DIST = 0.025; // screen-space radius treated as "cursor on this dot"
+    let hoverFrame = 0; // throttle counter for the CPU hover/label pass
+
+    // Rebuild the STATIC per-instance state (matrices + emissive/alpha) from the
+    // current search / filter / visibility / hover refs. Runs ONCE on setup and
+    // again whenever those change (via rebuildRef + a React effect) — never per
+    // frame. Jitter + dock-magnify are handled entirely on the GPU, so matrices
+    // carry only position, base scale, match-scale (1.4x) and hidden scale-0.
+    function rebuildInstances() {
+      const matches = matchIdsRef.current;
+      const hasSearch = matches.size > 0;
+      const visTypes = visibleTypesRef.current;
+      const projFilter = selectedProjectRef.current;
+      for (let gi = 0; gi < globeInstanced.length; gi++) {
+        const rec = globeInstanced[gi];
+        const { mesh, docs, basePositions, baseScales, emissiveArr, emissiveScaledArr, alphaArr } = rec;
+        const count = docs.length;
+        for (let i = 0; i < count; i++) {
+          const doc = docs[i];
+          const basePos = basePositions[i];
+          const isHidden = !visTypes.has(doc.type);
+          if (isHidden) {
+            instDummy.position.copy(basePos);
+            instDummy.scale.setScalar(0);
+            instDummy.rotation.set(0, 0, 0);
+            instDummy.updateMatrix();
+            mesh.setMatrixAt(i, instDummy.matrix);
+            emissiveArr[i] = 0;
+            emissiveScaledArr[i] = 0;
+            alphaArr[i] = 0;
+            continue;
+          }
+          const isMatched = hasSearch && (matches.has(doc.id) || (doc.chunk_ids?.some(cid => matches.has(cid)) ?? false));
+          const isProjectFiltered = projFilter != null && doc.project !== projFilter && doc.project != null;
+          const isFaded = (hasSearch && !isMatched) || isProjectFiltered;
+
+          let scale = baseScales[i];
+          if (isMatched) scale *= 1.4;
+          instDummy.position.copy(basePos);
+          instDummy.scale.setScalar(scale);
+          instDummy.rotation.set(0, 0, 0);
+          instDummy.updateMatrix();
+          mesh.setMatrixAt(i, instDummy.matrix);
+
+          // Emissive is split so the shader can apply the per-frame zoom factor
+          // (uEmissiveScale) without any CPU work:
+          //   final = aEmissive + aEmissiveScaled * uEmissiveScale + magnify boost
+          let unscaled = 0, scaled = 0;
+          if (isFaded) unscaled = 0.1;      // faded: fixed 0.1 (unscaled)
+          else scaled = 0.5;                // normal: 0.5 * zoom
+          if (isMatched) { unscaled = 0; scaled = 1.0; } // matched: 1.0 * zoom
+          // Hover glow is handled by the GPU magnify boost (the dot under the
+          // cursor grows + brightens), so no per-instance hover override here —
+          // that would force a full rebuild on every hover change.
+          emissiveArr[i] = unscaled;
+          emissiveScaledArr[i] = scaled;
+          alphaArr[i] = isFaded ? 0.05 : 1.0;
+        }
+        mesh.instanceMatrix.needsUpdate = true;
+        rec.emissiveAttr.needsUpdate = true;
+        rec.emissiveScaledAttr.needsUpdate = true;
+        rec.alphaAttr.needsUpdate = true;
+      }
+    }
+    rebuildRef.current = rebuildInstances;
+    rebuildInstances();
+
+    // Throttled + back-face-culled CPU pass: derive hover + the proximity-label
+    // list. Only front-facing, visible, non-faded dots are projected (roughly
+    // half the cloud), and this runs at most every 4th frame — the projection
+    // O(n) loop no longer runs every frame. Uses STATIC base positions (the
+    // ±0.12 GPU jitter is below the hover threshold, so this is equivalent).
+    const camPos = new THREE.Vector3();
+    function updateHoverAndLabels() {
+      const matches = matchIdsRef.current;
+      const hasSearch = matches.size > 0;
+      const visTypes = visibleTypesRef.current;
+      const projFilter = selectedProjectRef.current;
+      const mx = mouseNDC.current.x;
+      const my = mouseNDC.current.y;
+      camPos.copy(camera.position);
+
+      const nearby: { screenDist: number; ndcX: number; ndcY: number; doc: MapDocument; color: string }[] = [];
+      for (let gi = 0; gi < globeInstanced.length; gi++) {
+        const rec = globeInstanced[gi];
+        const { docs, basePositions, center } = rec;
+        const count = docs.length;
+        for (let i = 0; i < count; i++) {
+          const doc = docs[i];
+          if (!visTypes.has(doc.type)) continue;
+          const basePos = basePositions[i];
+          // Back-face cull: skip dots on the far side of their globe (outward
+          // normal from globe centre pointing away from the camera).
+          const nx = basePos.x - center.x, ny = basePos.y - center.y, nz = basePos.z - center.z;
+          const vx = camPos.x - basePos.x, vy = camPos.y - basePos.y, vz = camPos.z - basePos.z;
+          if (nx * vx + ny * vy + nz * vz <= 0) continue;
+
+          const isMatched = hasSearch && (matches.has(doc.id) || (doc.chunk_ids?.some(cid => matches.has(cid)) ?? false));
+          const isProjectFiltered = projFilter != null && doc.project !== projFilter && doc.project != null;
+          const isFaded = (hasSearch && !isMatched) || isProjectFiltered;
+          if (isFaded) continue;
+
+          tempVec.copy(basePos).project(camera);
+          if (tempVec.z >= 1) continue;
+          const screenDist = Math.sqrt(
+            Math.pow((tempVec.x - mx) * aspectRatio, 2) +
+            Math.pow(tempVec.y - my, 2)
+          );
+          if (screenDist < 0.5) {
+            nearby.push({
+              screenDist,
+              ndcX: tempVec.x,
+              ndcY: tempVec.y,
+              doc,
+              color: TYPE_COLORS[doc.type] || TYPE_COLORS.unknown,
+            });
+          }
+        }
+      }
+
+      nearby.sort((a, b) => a.screenDist - b.screenDist);
+      for (let li = 0; li < labelPool.length; li++) {
+        const el = labelPool[li];
+        if (li < nearby.length) {
+          const n = nearby[li];
+          const px = (n.ndcX + 1) * 0.5 * width;
+          const py = (1 - (n.ndcY + 1) * 0.5) * height;
+          const opacity = Math.max(0.3, 1 - n.screenDist / 0.5);
+          el.textContent = extractTitle(n.doc.source_file);
+          el.style.left = `${px + 10}px`;
+          el.style.top = `${py - 8}px`;
+          el.style.opacity = String(opacity);
+          el.style.color = n.color;
+          el.style.display = '';
+        } else {
+          el.style.display = 'none';
+        }
+      }
+
+      // Derive hover from the nearest projected node. Push to React + cursor
+      // only on change.
+      if (!isDragging.current) {
+        const top = nearby.length > 0 ? nearby[0] : null;
+        const hoverDoc = top && top.screenDist < HOVER_DIST ? top.doc : null;
+        const hoverId = hoverDoc ? hoverDoc.id : null;
+        if (hoverId !== lastHoverId) {
+          lastHoverId = hoverId;
+          setHoveredDoc(hoverDoc);
+          container!.style.cursor = hoverDoc ? 'pointer' : 'grab';
+        }
+      }
+    }
 
     function animate() {
       time += 0.016;
@@ -582,122 +807,25 @@ export function Map() {
         }
       });
 
-      // Update nodes
-      const matches = matchIdsRef.current;
-      const hasSearch = matches.size > 0;
-      const hovered = hoveredDocRef.current;
-      const visTypes = visibleTypesRef.current;
-      const projFilter = selectedProjectRef.current;
-      const mx = mouseNDC.current.x;
-      const my = mouseNDC.current.y;
-
-      const nearby: { screenDist: number; ndcX: number; ndcY: number; doc: MapDocument; color: string }[] = [];
-
-      // `flatIndex` reproduces the old across-all-globes mesh index so the
-      // fractal-noise jitter pattern is identical to the per-mesh version.
-      let flatIndex = 0;
+      // Per-frame instance work is now ~free: only push a handful of scalar
+      // uniforms into each globe material. Jitter + dock-magnify (and their
+      // emissive boost) run entirely on the GPU; the instance matrices +
+      // emissive/alpha buffers are static (rebuilt only on state change).
       const emissiveScale = Math.max(0.2, Math.min(1.0, 20 / dist));
-      for (let gi2 = 0; gi2 < globeInstanced.length; gi2++) {
-        const rec = globeInstanced[gi2];
-        const { mesh, docs, basePositions, baseScales, emissiveArr, alphaArr } = rec;
-        const count = docs.length;
-        for (let i = 0; i < count; i++, flatIndex++) {
-          const doc = docs[i];
-          const basePos = basePositions[i];
-          const baseScale = baseScales[i];
-          const isHidden = !visTypes.has(doc.type);
-          const isMatched = hasSearch && (matches.has(doc.id) || (doc.chunk_ids?.some(cid => matches.has(cid)) ?? false));
-          const isProjectFiltered = projFilter != null && doc.project !== projFilter && doc.project != null;
-          const isFaded = (hasSearch && !isMatched) || isProjectFiltered;
-
-          if (isHidden) {
-            // Collapse hidden instances so they neither render nor raycast.
-            instDummy.position.copy(basePos);
-            instDummy.scale.setScalar(0);
-            instDummy.rotation.set(0, 0, 0);
-            instDummy.updateMatrix();
-            mesh.setMatrixAt(i, instDummy.matrix);
-            continue;
-          }
-
-          let px = basePos.x, py = basePos.y, pz = basePos.z;
-          if (!prefersReduced) {
-            const t = time * 0.15;
-            px += fractalNoise(t + flatIndex * 0.17, 2, 42) * 0.12;
-            py += fractalNoise(t + flatIndex * 0.23, 2, 97) * 0.12;
-            pz += fractalNoise(t + flatIndex * 0.31, 2, 163) * 0.06;
-          }
-
-          tempVec.set(px, py, pz).project(camera);
-          const screenDist = Math.sqrt(
-            Math.pow((tempVec.x - mx) * aspectRatio, 2) +
-            Math.pow(tempVec.y - my, 2)
-          );
-          const magnifyRadius = 0.5;
-          const magnifyFactor = screenDist < magnifyRadius
-            ? 1 + 0.6 * Math.pow(1 - screenDist / magnifyRadius, 2)
-            : 1;
-
-          let scale = baseScale * magnifyFactor;
-          if (isMatched) scale *= 1.4;
-          instDummy.position.set(px, py, pz);
-          instDummy.scale.setScalar(scale);
-          instDummy.rotation.set(0, 0, 0);
-          instDummy.updateMatrix();
-          mesh.setMatrixAt(i, instDummy.matrix);
-
-          const baseGlow = isFaded ? 0.1 : 0.5 * emissiveScale;
-          let emissive = baseGlow + (magnifyFactor - 1) * 0.6;
-          if (isMatched) emissive = 1.0 * emissiveScale;
-          if (hovered?.id === doc.id) emissive = 1.2;
-          emissiveArr[i] = emissive;
-          alphaArr[i] = isFaded ? 0.05 : 1.0;
-
-          if (!isFaded && screenDist < 0.5 && tempVec.z < 1) {
-            nearby.push({
-              screenDist,
-              ndcX: tempVec.x,
-              ndcY: tempVec.y,
-              doc,
-              color: TYPE_COLORS[doc.type] || TYPE_COLORS.unknown,
-            });
-          }
-        }
-        mesh.instanceMatrix.needsUpdate = true;
-        rec.emissiveAttr.needsUpdate = true;
-        rec.alphaAttr.needsUpdate = true;
+      const aspectNow = camera.aspect;
+      for (let u = 0; u < docUniforms.length; u++) {
+        const un = docUniforms[u];
+        un.uTime.value = time;
+        un.uMouse.value.set(mouseNDC.current.x, mouseNDC.current.y);
+        un.uEmissiveScale.value = emissiveScale;
+        un.uAspect.value = aspectNow;
       }
 
-      nearby.sort((a, b) => a.screenDist - b.screenDist);
-      for (let li = 0; li < labelPool.length; li++) {
-        const el = labelPool[li];
-        if (li < nearby.length) {
-          const n = nearby[li];
-          const px = (n.ndcX + 1) * 0.5 * width;
-          const py = (1 - (n.ndcY + 1) * 0.5) * height;
-          const opacity = Math.max(0.3, 1 - n.screenDist / 0.5);
-          el.textContent = extractTitle(n.doc.source_file);
-          el.style.left = `${px + 10}px`;
-          el.style.top = `${py - 8}px`;
-          el.style.opacity = String(opacity);
-          el.style.color = n.color;
-          el.style.display = '';
-        } else {
-          el.style.display = 'none';
-        }
-      }
-
-      // Derive hover from the nearest projected node (reuses the work above —
-      // no raycast). Push to React state + cursor only on change.
-      if (!isDragging.current) {
-        const top = nearby.length > 0 ? nearby[0] : null;
-        const hoverDoc = top && top.screenDist < HOVER_DIST ? top.doc : null;
-        const hoverId = hoverDoc ? hoverDoc.id : null;
-        if (hoverId !== lastHoverId) {
-          lastHoverId = hoverId;
-          setHoveredDoc(hoverDoc);
-          container!.style.cursor = hoverDoc ? 'pointer' : 'grab';
-        }
+      // Hover + proximity labels: CPU work, throttled to every 4th frame
+      // (~15/sec) and back-face culled inside updateHoverAndLabels().
+      hoverFrame++;
+      if (hoverFrame % 4 === 0) {
+        updateHoverAndLabels();
       }
 
       composer.render();
