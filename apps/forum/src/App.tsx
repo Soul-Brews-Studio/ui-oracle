@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { BasePathProvider } from '@ui-oracle/shared-ui';
+import { BasePathProvider, BuildFooter } from '@ui-oracle/shared-ui';
 import { Forum } from './pages/Forum';
 import { Header } from './components/Header';
 
@@ -18,6 +18,7 @@ export default function App() {
       <BasePathProvider value="">
         <Header />
         <ForumRoutes />
+        <BuildFooter />
       </BasePathProvider>
     </BrowserRouter>
   );

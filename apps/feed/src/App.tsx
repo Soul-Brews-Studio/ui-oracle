@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { BasePathProvider } from '@ui-oracle/shared-ui';
+import { BasePathProvider, BuildFooter } from '@ui-oracle/shared-ui';
 import { Feed } from './pages/Feed';
 import { DocRedirect } from './pages/DocRedirect';
 import { Header } from './components/Header';
@@ -20,6 +20,7 @@ export default function App() {
       <BasePathProvider value="">
         <Header />
         <FeedRoutes />
+        <BuildFooter />
       </BasePathProvider>
     </BrowserRouter>
   );
