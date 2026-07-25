@@ -92,7 +92,7 @@ function UnreachableLanding({
         </h1>
         <p className="text-text-secondary mb-2">
           {state === 'stuck'
-            ? `Something is listening on this host but it did not answer within ${PROBE_TIMEOUT_MS / 1000}s. The backend is most likely wedged — restart it rather than installing it again.`
+            ? `Something is listening on this host but did not answer within ${PROBE_TIMEOUT_MS / 1000}s. It is running — do not reinstall it. The server is single-threaded, so one long request (a big index or consolidation) blocks every other request until it finishes, and then everything answers at once. Wait and hit Retry first; only restart if it stays silent.`
             : 'This studio is a thin client. Run the backend locally first:'}
         </p>
         <p className="text-text-secondary text-xs mb-6">
@@ -101,10 +101,17 @@ function UnreachableLanding({
 
         {state === 'stuck' ? (
           <div className="space-y-4 mb-8">
-            <InstallCard label="1. Restart the backend (pm2)" command="pm2 restart arra-oracle" />
             <InstallCard
-              label="2. Or find and stop whatever holds the port"
-              command="lsof -nP -iTCP:47778 -sTCP:LISTEN"
+              label="1. See what it is busy with (a slow request will show its ms when it finally returns)"
+              command="pm2 logs arra-oracle --lines 40"
+            />
+            <InstallCard
+              label="2. Confirm it is alive — a spinning process sits at ~100% CPU in state R"
+              command="ps -o pid,stat,%cpu,etime -p $(lsof -tiTCP:47778 -sTCP:LISTEN)"
+            />
+            <InstallCard
+              label="3. Last resort — this aborts whatever it was working on"
+              command="pm2 restart arra-oracle"
             />
           </div>
         ) : (
