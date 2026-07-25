@@ -674,6 +674,7 @@ export function Map() {
       const my = mouseNDC.current.y;
       camPos.copy(camera.position);
 
+      const MAX_LABELS = labelPool.length;
       const nearby: { screenDist: number; ndcX: number; ndcY: number; doc: MapDocument; color: string }[] = [];
       for (let gi = 0; gi < globeInstanced.length; gi++) {
         const rec = globeInstanced[gi];
@@ -700,19 +701,29 @@ export function Map() {
             Math.pow((tempVec.x - mx) * aspectRatio, 2) +
             Math.pow(tempVec.y - my, 2)
           );
-          if (screenDist < 0.5) {
-            nearby.push({
+          // Bounded insert: keep only the MAX_LABELS nearest, sorted. Over the
+          // dense centre thousands of dots fall within 0.5 — pushing + sorting
+          // all of them was the hover stutter. Insertion into a ≤8 array keeps
+          // it O(n·8) with no large allocation and no sort of thousands.
+          if (screenDist < 0.5 &&
+              (nearby.length < MAX_LABELS || screenDist < nearby[nearby.length - 1].screenDist)) {
+            let lo = 0, hi = nearby.length;
+            while (lo < hi) {
+              const mid = (lo + hi) >> 1;
+              if (nearby[mid].screenDist < screenDist) lo = mid + 1; else hi = mid;
+            }
+            nearby.splice(lo, 0, {
               screenDist,
               ndcX: tempVec.x,
               ndcY: tempVec.y,
               doc,
               color: TYPE_COLORS[doc.type] || TYPE_COLORS.unknown,
             });
+            if (nearby.length > MAX_LABELS) nearby.pop();
           }
         }
       }
-
-      nearby.sort((a, b) => a.screenDist - b.screenDist);
+      // nearby is already sorted by the bounded insertion above.
       for (let li = 0; li < labelPool.length; li++) {
         const el = labelPool[li];
         if (li < nearby.length) {
