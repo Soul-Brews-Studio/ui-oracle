@@ -8,11 +8,12 @@ function formatBuildDate(iso: string): string {
   if (!iso || iso === 'dev') return 'dev';
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
-  // e.g. "2026-07-15 14:32 UTC"
+  // Always rendered in GMT (getUTC*), never the viewer's local time, so the
+  // stamp means the same thing on every machine. e.g. "2026-07-15 14:32 GMT"
   const pad = (n: number) => String(n).padStart(2, '0');
   return (
     `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())} ` +
-    `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())} UTC`
+    `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())} GMT`
   );
 }
 
@@ -26,7 +27,7 @@ export function BuildFooter() {
       aria-label="build info"
     >
       <span className="text-[10px] font-mono text-text-muted/70">
-        {version} · built {built}
+        ui {version} · built {built}
       </span>
     </footer>
   );
