@@ -7,6 +7,17 @@ export const API_BASE = apiUrl('/api');
 const TEN_MIN = 10 * 60 * 1000;
 const ONE_HOUR = 60 * 60 * 1000;
 
+/**
+ * Host-scope every cache key with API_BASE. Without this, switching `?host=`
+ * (a full page reload, so API_BASE is re-resolved fresh) would still read a
+ * cache entry written by the previous backend — the key describes the query,
+ * not which backend wrote the entry. (Found via multi-instance testing —
+ * reported by Muninn, 2026-07-25.)
+ */
+function hk(key: string): string {
+  return `${API_BASE}::${key}`;
+}
+
 export interface Document {
   id: string;
   type: 'principle' | 'learning' | 'retro';
@@ -37,7 +48,7 @@ export async function search(
   const params = new URLSearchParams({ q: query, type, limit: String(limit), mode });
   if (model) params.set('model', model);
   const qs = params.toString();
-  return cached(`search:${qs}`, TEN_MIN, async () => {
+  return cached(hk(`search:${qs}`), TEN_MIN, async () => {
     const res = await fetch(`${API_BASE}/search?${qs}`);
     if (!res.ok) throw new Error(`search ${res.status}`);
     return res.json();
@@ -57,7 +68,7 @@ export interface Stats {
 }
 
 export async function getStats(): Promise<Stats> {
-  return cached('stats', ONE_HOUR, async () => {
+  return cached(hk('stats'), ONE_HOUR, async () => {
     const res = await fetch(`${API_BASE}/stats`);
     if (!res.ok) throw new Error(`stats ${res.status}`);
     return res.json();
@@ -110,7 +121,7 @@ export interface MenuItem {
 export async function getMenu({ host }: { host?: string } = {}): Promise<MenuItem[]> {
   const qs = host ? `?host=${encodeURIComponent(host)}` : '';
   const key = `menu:${host ?? ''}`;
-  return cached(key, TEN_MIN, async () => {
+  return cached(hk(key), TEN_MIN, async () => {
     const res = await fetch(`${API_BASE}/menu${qs}`);
     if (!res.ok) throw new Error(`menu ${res.status}`);
     const data = await res.json();
