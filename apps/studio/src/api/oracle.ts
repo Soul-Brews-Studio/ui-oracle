@@ -13,6 +13,19 @@ export { apiUrl } from './host';
 /** Resolved base for Oracle API (e.g. `/api` or `https://mba.wg:47778/api`). */
 export const API_BASE = apiUrl('/api');
 
+/**
+ * Host-scope every cache key with API_BASE. Without this, switching `?host=`
+ * (a full page reload, so API_BASE is re-resolved fresh) would still read a
+ * cache entry written under the SAME plain key by the previous backend — e.g.
+ * `stats` for backend A gets served back verbatim after switching to backend
+ * B, because cached()'s only staleness check is the frontend bundle version,
+ * not which backend wrote the entry. (Found via multi-instance testing —
+ * reported by Muninn, 2026-07-25.)
+ */
+function hk(key: string): string {
+  return `${API_BASE}::${key}`;
+}
+
 /** Ping the backend — used by the header status chip. */
 export async function ping(): Promise<boolean> {
   try {
@@ -93,7 +106,7 @@ export async function search(
   const params = new URLSearchParams({ q: query, type, limit: String(limit), mode });
   if (model) params.set('model', model);
   const qs = params.toString();
-  return cached(`search:${qs}`, TEN_MIN, async () => {
+  return cached(hk(`search:${qs}`), TEN_MIN, async () => {
     const res = await fetch(`${API_BASE}/search?${qs}`);
     return res.json();
   }, { tag: 'search' });
@@ -103,7 +116,7 @@ export async function search(
 export async function list(type: string = 'all', limit: number = 20, offset: number = 0): Promise<{ results: Document[]; total: number }> {
   const params = new URLSearchParams({ type, limit: String(limit), offset: String(offset) });
   const qs = params.toString();
-  return cached(`list:${type}:${qs}`, ONE_HOUR, async () => {
+  return cached(hk(`list:${type}:${qs}`), ONE_HOUR, async () => {
     const res = await fetch(`${API_BASE}/list?${qs}`);
     return res.json();
   }, { tag: `list:${type}` });
@@ -111,7 +124,7 @@ export async function list(type: string = 'all', limit: number = 20, offset: num
 
 // Get stats
 export async function getStats(): Promise<Stats> {
-  return cached('stats', ONE_HOUR, async () => {
+  return cached(hk('stats'), ONE_HOUR, async () => {
     const res = await fetch(`${API_BASE}/stats`);
     if (!res.ok) {
       throw new Error(`Server error: ${res.status}`);
@@ -165,7 +178,7 @@ export async function getFile(filePath: string, project?: string): Promise<{ con
 
 // Get document by ID
 export async function getDoc(id: string): Promise<Document & { error?: string }> {
-  return cached(`doc:${id}`, ONE_DAY, async () => {
+  return cached(hk(`doc:${id}`), ONE_DAY, async () => {
     const res = await fetch(`${API_BASE}/doc/${encodeURIComponent(id)}`);
     return res.json();
   }, { tag: 'doc' });
@@ -175,7 +188,7 @@ export async function getDoc(id: string): Promise<Document & { error?: string }>
 export async function getSimilar(docId: string, limit: number = 5): Promise<{ results: Document[]; docId: string }> {
   const params = new URLSearchParams({ id: docId, limit: String(limit) });
   const qs = params.toString();
-  return cached(`similar:${docId}:${limit}`, ONE_DAY, async () => {
+  return cached(hk(`similar:${docId}:${limit}`), ONE_DAY, async () => {
     const res = await fetch(`${API_BASE}/similar?${qs}`);
     return res.json();
   }, { tag: 'similar' });
@@ -214,7 +227,7 @@ export async function getOracles(): Promise<{
   total_projects: number;
   total_identities: number;
 }> {
-  return cached('oracles', ONE_DAY, async () => {
+  return cached(hk('oracles'), ONE_DAY, async () => {
     const res = await fetch(`${API_BASE}/oracles`);
     return res.json();
   }, { tag: 'oracles' });
@@ -227,7 +240,7 @@ export async function getMap(): Promise<{ documents: MapDocument[]; total: numbe
 
 export async function getMap3d(model?: string): Promise<{ documents: MapDocument[]; total: number; pca_info?: any }> {
   const params = model ? `?model=${encodeURIComponent(model)}` : '';
-  const key = `map3d:${model ?? 'default'}`;
+  const key = hk(`map3d:${model ?? 'default'}`);
   return cached(key, ONE_DAY, async () => {
     const res = await fetch(`${API_BASE}/map3d${params}`);
     return res.json();

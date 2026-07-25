@@ -4,7 +4,13 @@ import { cached } from '../../cache';
 import { buildNavSet, type MenuApiItem, type NavSet } from './nav-types';
 
 // v2: 2026-04-20 — Forum child moved to forum.buildwithoracle.com
-const MENU_CACHE_KEY = 'header:menu:v2';
+//
+// Host-scoped: without this, switching ?host= (a full reload, so apiUrl()
+// re-resolves fresh) would still read back the menu cached under the SAME
+// key from the PREVIOUS backend — cached()'s only staleness check is the
+// frontend bundle version, not which backend wrote the entry. Same class of
+// bug as the oracle.ts API cache (reported by Muninn, 2026-07-25).
+const MENU_CACHE_KEY = `header:menu:v2::${apiUrl('/api')}`;
 const MENU_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
 /**
