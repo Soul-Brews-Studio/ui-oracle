@@ -7,7 +7,7 @@ import menuConfig from '../../menu.json';
  * App-specific wiring: passes the local `ping` fn for the backend chip.
  */
 export function Header() {
-  return <AppHeader brandLabel="ARRA 🔮Racle — Vector" ping={ping} menuConfig={menuConfig} />;
+  return <AppHeader brandLabel="ARRA Oracle 🔮 — Vector" ping={ping} menuConfig={menuConfig} />;
 }
 
 /** Re-exported for existing imports (VectorSubNav etc.). */
