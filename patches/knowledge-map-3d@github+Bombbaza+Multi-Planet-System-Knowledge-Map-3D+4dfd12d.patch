@@ -1,5 +1,5 @@
 diff --git a/src/KnowledgeMap.tsx b/src/KnowledgeMap.tsx
-index 3867c84..38fd090 100644
+index 3867c84..a657108 100644
 --- a/src/KnowledgeMap.tsx
 +++ b/src/KnowledgeMap.tsx
 @@ -238,7 +238,7 @@ export function KnowledgeMap({
@@ -19,7 +19,76 @@ index 3867c84..38fd090 100644
  
    // Celestial event tracking
    const prevDocIdsRef = useRef<Set<string>>(new Set());
-@@ -776,57 +777,128 @@ export function KnowledgeMap({
+@@ -298,6 +299,23 @@ export function KnowledgeMap({
+   const isDragging = useRef(false);
+   const dragStart = useRef({ x: 0, y: 0 });
+ 
++  // Radius of the sphere the clusters actually occupy. The host lays clusters
++  // out on a shell that grows with the corpus (~90 units at 35k docs), but the
++  // camera used to be hard-clamped to 40 and cluster labels only drew within 35
++  // — so past a few thousand documents no cluster could ever be reached OR
++  // labelled, and the view showed an empty centre. Everything camera-related is
++  // now derived from this so the envelope matches whatever scene it is given.
++  const sceneExtent = useRef(12);
++  /** Framed once on first layout; later rebuilds must not reset the camera. */
++  const framedRef = useRef(false);
++  // The original constants (home 28, dolly 40, label 35) were coherent only at
++  // the layout's *minimum* shell radius of 12 — i.e. a handful of documents.
++  // Keep those exact proportions but express them relative to the real shell,
++  // so the framing users got on a tiny corpus is what they get on a huge one.
++  const maxDistFor = () => sceneExtent.current * (40 / 12);
++  const homeDistFor = () => sceneExtent.current * (28 / 12);
++  const labelDistFor = () => sceneExtent.current * (35 / 12);
++
+   // Camera lookAt target (for cluster zoom)
+   const lookAtX = useRef({ x: 0, v: 0 });
+   const lookAtY = useRef({ x: 0, v: 0 });
+@@ -443,7 +461,7 @@ export function KnowledgeMap({
+       if (gesture === 'fist') {
+         targetDist.current = Math.max(3, targetDist.current - 0.3);
+       } else if (gesture === 'open') {
+-        targetDist.current = Math.min(40, targetDist.current + 0.3);
++        targetDist.current = Math.min(maxDistFor(), targetDist.current + 0.3);
+       }
+     }, 50);
+     return () => clearInterval(interval);
+@@ -466,7 +484,7 @@ export function KnowledgeMap({
+     targetLookAtX.current = 0;
+     targetLookAtY.current = 0;
+     targetLookAtZ.current = 0;
+-    targetDist.current = 28;
++    targetDist.current = homeDistFor();
+     setFocusedCluster(null);
+   }, []);
+ 
+@@ -547,6 +565,26 @@ export function KnowledgeMap({
+     const container = containerRef.current;
+     if (!container || documents.length === 0) return;
+ 
++    // Measure the scene the host handed us (furthest cluster shell + its own
++    // radius) and frame the camera on it. Without this the camera keeps a fixed
++    // 28/40-unit envelope regardless of how far out the clusters actually sit.
++    {
++      let extent = 0;
++      for (const c of clusters) {
++        const d = Math.sqrt(c.cx * c.cx + c.cy * c.cy + c.cz * c.cz);
++        if (d > extent) extent = d;
++      }
++      // 12 is the layout's floor shell radius, and the constants below are
++      // calibrated to it — so a single-cluster scene behaves exactly as before.
++      sceneExtent.current = Math.max(12, extent);
++      // Only frame on first layout — never yank a camera the user has moved.
++      if (!framedRef.current) {
++        framedRef.current = true;
++        targetDist.current = homeDistFor();
++        camDist.current = { x: homeDistFor(), v: 0 };
++      }
++    }
++
+     const width = container.clientWidth;
+     const height = container.clientHeight;
+ 
+@@ -776,57 +814,128 @@ export function KnowledgeMap({
  
      const planetGeometry = new THREE.SphereGeometry(0.08, 10, 10);
      const moonGeometry = new THREE.SphereGeometry(0.04, 6, 6);
@@ -185,7 +254,7 @@ index 3867c84..38fd090 100644
  
      // ---- Mouse handlers ----
      function onMouseDown(e: MouseEvent) {
-@@ -846,7 +918,8 @@ export function KnowledgeMap({
+@@ -846,7 +955,8 @@ export function KnowledgeMap({
          raycaster.setFromCamera(mouse, camera);
          const intersects = raycaster.intersectObjects(allInteractable);
          if (intersects.length > 0) {
@@ -195,7 +264,7 @@ index 3867c84..38fd090 100644
            if (obj.userData.isCluster) {
              const cluster = obj.userData.cluster as ClusterMeta;
              if (onClusterClick) {
-@@ -854,9 +927,11 @@ export function KnowledgeMap({
+@@ -854,9 +964,11 @@ export function KnowledgeMap({
              } else {
                zoomToCluster(cluster);
              }
@@ -210,7 +279,7 @@ index 3867c84..38fd090 100644
            }
          }
        }
-@@ -882,14 +957,20 @@ export function KnowledgeMap({
+@@ -882,14 +994,20 @@ export function KnowledgeMap({
        const intersects = raycaster.intersectObjects(allInteractable);
  
        if (intersects.length > 0) {
@@ -235,7 +304,16 @@ index 3867c84..38fd090 100644
          }
        } else {
          setHoveredDoc(null);
-@@ -1132,6 +1213,8 @@ export function KnowledgeMap({
+@@ -900,7 +1018,7 @@ export function KnowledgeMap({
+     function onWheel(e: WheelEvent) {
+       e.preventDefault();
+       const delta = e.deltaY > 0 ? 1.08 : 0.92;
+-      targetDist.current = Math.max(3, Math.min(40, targetDist.current * delta));
++      targetDist.current = Math.max(3, Math.min(maxDistFor(), targetDist.current * delta));
+     }
+ 
+     function onMouseLeave() {
+@@ -1132,6 +1250,8 @@ export function KnowledgeMap({
  
      // === Animation loop ===
      let time = 0;
@@ -244,7 +322,16 @@ index 3867c84..38fd090 100644
      const dt = 1 / 60;
      const tempVec = new THREE.Vector3();
      const lookAtVec = new THREE.Vector3();
-@@ -1237,11 +1320,11 @@ export function KnowledgeMap({
+@@ -1216,7 +1336,7 @@ export function KnowledgeMap({
+           Math.pow(camera.position.y - cluster.cy, 2) +
+           Math.pow(camera.position.z - cluster.cz, 2)
+         );
+-        if (camDistToCluster > 35) {
++        if (camDistToCluster > labelDistFor()) {
+           el.style.display = 'none';
+           return;
+         }
+@@ -1237,11 +1357,11 @@ export function KnowledgeMap({
        // === Orbital animation: planets ===
        const nearby: { screenDist: number; ndcX: number; ndcY: number; doc: MapDocument; color: string }[] = [];
  
@@ -261,7 +348,7 @@ index 3867c84..38fd090 100644
          const isMatched = hasSearch && (matches.has(doc.id) || (doc.chunkIds?.some(cid => matches.has(cid)) ?? false));
          const isFaded = hasSearch && !isMatched;
  
-@@ -1274,11 +1357,11 @@ export function KnowledgeMap({
+@@ -1274,11 +1394,11 @@ export function KnowledgeMap({
            const px = base.cx + rx * tux + ry * base.vx;
            const py = base.cy + rx * tuy + ry * base.vy;
            const pz = base.cz + rx * tuz + ry * base.vz;
@@ -275,7 +362,7 @@ index 3867c84..38fd090 100644
          const screenDist = Math.sqrt(
            Math.pow((tempVec.x - mx) * aspectRatio, 2) +
            Math.pow(tempVec.y - my, 2)
-@@ -1290,13 +1373,17 @@ export function KnowledgeMap({
+@@ -1290,13 +1410,17 @@ export function KnowledgeMap({
  
          let scale = baseScl * magnifyFactor;
          if (isMatched) scale *= 1.4;
@@ -298,7 +385,7 @@ index 3867c84..38fd090 100644
  
          if (!isFaded && screenDist < 0.5 && tempVec.z < 1) {
            nearby.push({ screenDist, ndcX: tempVec.x, ndcY: tempVec.y, doc, color: TYPE_COLORS[doc.type] || TYPE_COLORS.unknown || '#666' });
-@@ -1304,28 +1391,28 @@ export function KnowledgeMap({
+@@ -1304,28 +1428,28 @@ export function KnowledgeMap({
        }
  
        // === Orbital animation: moons ===
@@ -337,7 +424,7 @@ index 3867c84..38fd090 100644
          const screenDist = Math.sqrt(
            Math.pow((tempVec.x - mx) * aspectRatio, 2) +
            Math.pow(tempVec.y - my, 2)
-@@ -1337,13 +1424,17 @@ export function KnowledgeMap({
+@@ -1337,13 +1461,17 @@ export function KnowledgeMap({
  
          let scale = baseScl * magnifyFactor;
          if (isMatched) scale *= 1.3;
@@ -360,7 +447,7 @@ index 3867c84..38fd090 100644
  
          if (!isFaded && screenDist < 0.4 && tempVec.z < 1) {
            nearby.push({ screenDist, ndcX: tempVec.x, ndcY: tempVec.y, doc, color: TYPE_COLORS[doc.type] || TYPE_COLORS.unknown || '#666' });
-@@ -1670,29 +1761,42 @@ export function KnowledgeMap({
+@@ -1670,29 +1798,42 @@ export function KnowledgeMap({
          const forceStrength = 0.025;
          const gwBaseFreq = 18;
  
@@ -425,7 +512,7 @@ index 3867c84..38fd090 100644
  
          for (const cmesh of clusterMeshes) {
            const dx = cmesh.position.x - sn.origin.x;
-@@ -1715,6 +1819,25 @@ export function KnowledgeMap({
+@@ -1715,6 +1856,25 @@ export function KnowledgeMap({
          }
        }
  
@@ -451,7 +538,7 @@ index 3867c84..38fd090 100644
        composer.render();
        animRef.current = requestAnimationFrame(animate);
      }
-@@ -1733,10 +1856,12 @@ export function KnowledgeMap({
+@@ -1733,10 +1893,12 @@ export function KnowledgeMap({
        container.removeEventListener('mouseleave', onMouseLeave);
        window.removeEventListener('resize', onResize);
  
@@ -468,7 +555,7 @@ index 3867c84..38fd090 100644
        clusterMeshes.forEach((mesh) => {
          (mesh.material as THREE.Material).dispose();
          scene.remove(mesh);
-@@ -1812,6 +1937,24 @@ export function KnowledgeMap({
+@@ -1812,6 +1974,24 @@ export function KnowledgeMap({
  
          <div ref={containerRef} className={styles.threeCanvas} />
          <div ref={labelsRef} className={styles.labelsOverlay} />
@@ -493,3 +580,12 @@ index 3867c84..38fd090 100644
  
          {hoveredDoc && (
            <div className={styles.tooltip}>
+@@ -1845,7 +2025,7 @@ export function KnowledgeMap({
+               className={styles.zoomBtn}
+             >+</button>
+             <button
+-              onClick={() => { targetDist.current = Math.min(40, targetDist.current * 1.35); }}
++              onClick={() => { targetDist.current = Math.min(maxDistFor(), targetDist.current * 1.35); }}
+               className={styles.zoomBtn}
+             >-</button>
+             <button
