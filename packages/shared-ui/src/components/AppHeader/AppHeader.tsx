@@ -88,7 +88,7 @@ function buildHref(origin: string, item: NavItem, currentHost: string): string {
 }
 
 interface AppHeaderProps {
-  /** Brand text — default "ARRA 🔮Racle". */
+  /** Brand text — default "ARRA Oracle 🔮". */
   brandLabel?: ReactNode;
   /** Backend reachability probe for the live/demo chip. */
   ping: () => Promise<boolean>;

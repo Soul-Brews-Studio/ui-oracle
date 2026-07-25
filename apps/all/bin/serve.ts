@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 /**
- * ARRA 🔮Racle — serve the combined Oracle hub locally.
+ * ARRA Oracle 🔮 — serve the combined Oracle hub locally.
  *
  * One bundle, every app under one origin: studio at root, satellites at
  * /vector, /feed, /canvas, /forum, /schedule, /indexer.
@@ -23,7 +23,7 @@ function getArg(flag: string, fallback: string): string {
 
 if (args.includes('--help') || args.includes('-h')) {
   console.log(`
-ARRA 🔮Racle — combined Oracle hub (studio + vector + canvas + feed + forum + schedule + indexer)
+ARRA Oracle 🔮 — combined Oracle hub (studio + vector + canvas + feed + forum + schedule + indexer)
 
 Usage:
   arra-oracle-studio [options]

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { BasePathProvider, useBase, withBase } from '@ui-oracle/shared-ui';
+import { BasePathProvider, useBase, withBase, BuildFooter, isManuallyDisconnected } from '@ui-oracle/shared-ui';
 import { Header } from './components/Header';
 
 import { Overview } from './pages/Overview';
@@ -18,7 +18,7 @@ import { Playground } from './pages/Playground';
 import { Compare } from './pages/Compare';
 import { CommandPalette } from './components/CommandPalette';
 import { BackendGate } from './components/BackendGate';
-import { Map } from './pages/Map';
+import { Memory } from './pages/Memory';
 import { Schedule } from './pages/Schedule';
 import { Pulse } from './pages/Pulse';
 import { Plugins } from './pages/Plugins';
@@ -26,9 +26,11 @@ import { Sessions } from './pages/Sessions';
 import { Canvas } from './pages/Canvas';
 import { Planets } from './pages/Planets';
 import { MenuEditor } from './pages/MenuEditor';
+import { Debug } from './pages/Debug';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { getStats } from './api/oracle';
 import { setVaultRepo } from './utils/docDisplay';
+import { installUiErrorCapture } from './lib/ui-error-bus';
 
 // Protected route wrapper
 function RequireAuth({ children }: { children: React.ReactNode }) {
@@ -86,11 +88,29 @@ function StandaloneHeader() {
  */
 export function StudioRoutes({ header = false }: { header?: boolean }) {
   useEffect(() => {
+    installUiErrorCapture(); // app-wide client-error capture for HUGINN (/__debug)
+    // Skip while manually disconnected — BackendGate promises not to probe
+    // any host until the user hits Connect, and this call runs above the
+    // gate (HUGINN's /__debug must stay reachable even when disconnected).
+    if (isManuallyDisconnected()) return;
     getStats().then(stats => {
       if (stats.vault_repo) setVaultRepo(stats.vault_repo);
     }).catch(() => {});
   }, []);
 
+  return (
+    <Routes>
+      {/* HUGINN — secret observability page. No menu entry (URL-only), and
+          mounted OUTSIDE BackendGate + AuthProvider so it stays reachable even
+          when the backend is down — debugging that is the whole point. */}
+      <Route path="__debug" element={<Debug />} />
+      <Route path="debug" element={<Debug />} />
+      <Route path="*" element={<GatedStudio header={header} />} />
+    </Routes>
+  );
+}
+
+function GatedStudio({ header }: { header: boolean }) {
   return (
     <BackendGate>
       <AuthProvider>
@@ -104,7 +124,9 @@ export function StudioRoutes({ header = false }: { header?: boolean }) {
           <Route path="search" element={<RequireAuth><Search /></RequireAuth>} />
           <Route path="playground" element={<RequireAuth><Playground /></RequireAuth>} />
           <Route path="compare" element={<RequireAuth><Compare /></RequireAuth>} />
-          <Route path="map" element={<RequireAuth><Map /></RequireAuth>} />
+          {/* Memory hosts every data-backed view of the corpus (Map / Planets /
+              Map 3D / Graph 3D) behind one switcher; ?view= selects. */}
+          <Route path="map" element={<RequireAuth><Memory /></RequireAuth>} />
           <Route path="graph" element={<GraphRedirect />} />
           <Route path="graph3d" element={<GraphRedirect />} />
           <Route path="handoff" element={<RequireAuth><Handoff /></RequireAuth>} />
@@ -139,6 +161,7 @@ export default function App() {
     <BrowserRouter>
       <BasePathProvider value="">
         <StudioRoutes header />
+        <BuildFooter />
       </BasePathProvider>
     </BrowserRouter>
   );

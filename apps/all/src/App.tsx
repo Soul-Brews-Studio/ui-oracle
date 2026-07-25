@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { BasePathProvider } from '@ui-oracle/shared-ui';
+import { BasePathProvider, BuildFooter } from '@ui-oracle/shared-ui';
 import { CombinedHeader } from './CombinedHeader';
 
 import { StudioRoutes } from '../../studio/src/App';
@@ -80,6 +80,7 @@ export default function App() {
           }
         />
       </Routes>
+      <BuildFooter />
     </BrowserRouter>
   );
 }

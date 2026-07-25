@@ -30,6 +30,7 @@ export type {
 export { SubNav } from './components/SubNav';
 export type { SubNavItem } from './components/SubNav';
 export { PageShell } from './components/PageShell';
+export { BuildFooter } from './components/BuildFooter';
 
 // Base-path routing (combined single-origin bundle; identity when standalone)
 export { BasePathProvider, useBase, withBase, AppLink, useNavTo } from './base-path';
@@ -50,6 +51,8 @@ export {
   isRemote,
   isStudioHost,
   isVectorHost,
+  isManuallyDisconnected,
+  setManuallyDisconnected,
   setStoredHost,
   wsUrl,
 } from './host';

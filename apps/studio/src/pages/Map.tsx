@@ -56,26 +56,6 @@ function xxhash(seed: number, data: number): number {
   return (h >>> 0) / 4294967296;
 }
 
-function noise1D(p: number, seed: number): number {
-  const i = Math.floor(p);
-  const f = p - i;
-  const u = f * f * (3 - 2 * f);
-  const g0 = xxhash(seed, i) * 2 - 1;
-  const g1 = xxhash(seed, i + 1) * 2 - 1;
-  return g0 * (1 - u) + g1 * u;
-}
-
-function fractalNoise(p: number, octaves: number, seed: number): number {
-  let f = 0, w = 1, max = 0;
-  for (let i = 0; i < octaves; i++) {
-    f += w * noise1D(p, seed + i);
-    max += w;
-    p *= 2;
-    w *= 0.5;
-  }
-  return f / max;
-}
-
 function ageScale(createdAt: string | null): number {
   if (!createdAt) return 0.7;
   const ageMs = Date.now() - new Date(createdAt).getTime();
@@ -84,6 +64,9 @@ function ageScale(createdAt: string | null): number {
   if (ageDays < 30) return 1.0;
   return 0.7;
 }
+
+/** How the document cloud is drawn: sphere instances, or a GPU point cloud. */
+type RenderMode = 'spheres' | 'points';
 
 interface GlobeData {
   key: string;
@@ -104,17 +87,48 @@ export function Map() {
   const [totalOracles, setTotalOracles] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [matchIds, setMatchIds] = useState<Set<string>>(new Set());
-  const [hoveredDoc, setHoveredDoc] = useState<MapDocument | null>(null);
   const [searching, setSearching] = useState(false);
   const [visibleTypes, setVisibleTypes] = useState<Set<string>>(new Set(['principle', 'learning', 'retro']));
   const [selectedProject, setSelectedProject] = useState<string | null>(null);
 
+  // --- Render mode: sphere instances vs point cloud -------------------------
+  // Spheres are InstancedMesh over a 10×10 SphereGeometry — ~80 triangles per
+  // doc, so 35k docs is ~2.8M triangles every frame even though it is a single
+  // draw call. The point cloud draws 1 vertex per doc instead (~80× less GPU
+  // work) and reproduces the same look with a soft round mask in the fragment
+  // shader. Above the threshold we pick points automatically; the user can pin
+  // either mode and that choice wins and persists.
+  const AUTO_POINTS_THRESHOLD = 20000;
+  const [modeOverride, setModeOverride] = useState<RenderMode | null>(() => {
+    const v = localStorage.getItem('map:renderMode');
+    return v === 'points' || v === 'spheres' ? v : null;
+  });
+  const totalDocs = globes.reduce((sum, g) => sum + g.documents.length, 0);
+  const autoMode: RenderMode = totalDocs > AUTO_POINTS_THRESHOLD ? 'points' : 'spheres';
+  const renderMode: RenderMode = modeOverride ?? autoMode;
+  const toggleRenderMode = () => {
+    const next: RenderMode = renderMode === 'points' ? 'spheres' : 'points';
+    // Pinning back to whatever auto would have chosen clears the override, so
+    // the map resumes following the doc count as the corpus grows.
+    if (next === autoMode) {
+      localStorage.removeItem('map:renderMode');
+      setModeOverride(null);
+    } else {
+      localStorage.setItem('map:renderMode', next);
+      setModeOverride(next);
+    }
+  };
+
   const visibleTypesRef = useRef<Set<string>>(new Set(['principle', 'learning', 'retro']));
   const selectedProjectRef = useRef<string | null>(null);
   const matchIdsRef = useRef<Set<string>>(new Set());
-  const hoveredDocRef = useRef<MapDocument | null>(null);
   const animRef = useRef<number>(0);
-  const meshesRef = useRef<THREE.Mesh[]>([]);
+  // Rebuilds the STATIC instance matrices + emissive/alpha attributes whenever
+  // search / filter / visibility / hover state changes (NOT per frame).
+  const rebuildRef = useRef<(() => void) | null>(null);
+  // Flat list of every node's static base position + doc, for the "center on
+  // visible" button (raycast/hover no longer use per-doc THREE.Mesh objects).
+  const nodesRef = useRef<{ basePos: THREE.Vector3; doc: MapDocument }[]>([]);
   const sceneRef = useRef<THREE.Scene | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
@@ -134,9 +148,17 @@ export function Map() {
   const dragStart = useRef({ x: 0, y: 0 });
 
   useEffect(() => { matchIdsRef.current = matchIds; }, [matchIds]);
-  useEffect(() => { hoveredDocRef.current = hoveredDoc; }, [hoveredDoc]);
   useEffect(() => { visibleTypesRef.current = visibleTypes; }, [visibleTypes]);
   useEffect(() => { selectedProjectRef.current = selectedProject; }, [selectedProject]);
+
+  // Any state that changes a dot's static appearance (match-scale, hidden
+  // scale-0, fade, hover glow) rebuilds the instance buffers once — the animate
+  // loop no longer recomputes them every frame.
+  // Rebuild static instance matrices/attributes only on coarse state changes.
+  // NOT on hoveredDoc — the dot under the cursor is already highlighted by the
+  // GPU magnify glow, so hover must not trigger an O(n) rebuild (that was the
+  // per-frame cost we just removed).
+  useEffect(() => { rebuildRef.current?.(); }, [matchIds, visibleTypes, selectedProject]);
 
   const [loadingModel, setLoadingModel] = useState<string | null>(null);
 
@@ -244,11 +266,244 @@ export function Map() {
     const stars = new THREE.Points(starGeo, starMat);
     scene.add(stars);
 
-    // Shared geometry
+    // Shared base geometry (cloned per globe so each can carry its own
+    // per-instance attribute arrays).
     const nodeGeometry = new THREE.SphereGeometry(0.05, 10, 10);
-    const meshes: THREE.Mesh[] = [];
     const globeMeshes: THREE.LineSegments[] = [];
     const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    // Reusable scratch object for composing per-instance matrices.
+    const instDummy = new THREE.Object3D();
+
+    // Shader uniform bundles (one per globe material). The animate loop writes
+    // uTime / uMouse / uEmissiveScale / uAspect into these every frame — the
+    // ONLY per-frame work that touches the instance clouds.
+    interface DocUniforms {
+      uTime: { value: number };
+      uMouse: { value: THREE.Vector2 };
+      uAspect: { value: number };
+      uEmissiveScale: { value: number };
+    }
+    const docUniforms: DocUniforms[] = [];
+
+    // MeshStandardMaterial exposes no per-instance emissive / opacity / colour,
+    // and no way to jitter/magnify instances on the GPU. We inject instanced
+    // attributes AND uniforms into the shader so all per-frame per-instance work
+    // (floating jitter + dock-magnify) runs on the vertex shader instead of a
+    // CPU O(n) loop. The animate loop only pokes the uniforms (a handful of
+    // scalars) each frame — never the per-instance buffers.
+    //
+    // Instanced attributes:
+    //   aInstColor      (vec3)  -> diffuse tint + emissive glow colour
+    //   aEmissive       (float) -> unscaled emissive base (faded 0.1 / hover 1.2)
+    //   aEmissiveScaled (float) -> emissive base multiplied by uEmissiveScale (zoom)
+    //   aAlpha          (float) -> per-instance opacity (search fade)
+    //   aSeed           (float) -> per-instance jitter seed
+    //
+    // Uniforms (updated per-frame, ~free):
+    //   uTime, uMouse (NDC), uAspect, uEmissiveScale, uJitterAmp
+    //   uMagnifyRadius (0.5), uMagnifyStrength (0.6)
+    const aspect0 = width / height;
+    function makeInstancedDocMaterial(): THREE.MeshStandardMaterial {
+      const material = new THREE.MeshStandardMaterial({
+        color: 0xffffff,
+        metalness: 0.3,
+        roughness: 0.2,
+        transparent: true,
+        opacity: 1.0,
+      });
+      material.onBeforeCompile = (shader) => {
+        shader.uniforms.uTime = { value: 0 };
+        shader.uniforms.uMouse = { value: new THREE.Vector2(10, 10) };
+        shader.uniforms.uAspect = { value: aspect0 };
+        shader.uniforms.uEmissiveScale = { value: 1.0 };
+        shader.uniforms.uJitterAmp = { value: prefersReduced ? 0 : 1 };
+        shader.uniforms.uMagnifyRadius = { value: 0.5 };
+        shader.uniforms.uMagnifyStrength = { value: 0.6 };
+        docUniforms.push(shader.uniforms as unknown as DocUniforms);
+
+        shader.vertexShader =
+          'uniform float uTime;\nuniform vec2 uMouse;\nuniform float uAspect;\n' +
+          'uniform float uJitterAmp;\nuniform float uMagnifyRadius;\nuniform float uMagnifyStrength;\n' +
+          'attribute vec3 aInstColor;\nattribute float aEmissive;\nattribute float aEmissiveScaled;\nattribute float aAlpha;\nattribute float aSeed;\n' +
+          'varying vec3 vInstColor;\nvarying float vEmissive;\nvarying float vEmissiveScaled;\nvarying float vAlpha;\nvarying float vMagnify;\n' +
+          shader.vertexShader
+            .replace(
+              '#include <begin_vertex>',
+              '#include <begin_vertex>\n' +
+              '\tvInstColor = aInstColor;\n\tvEmissive = aEmissive;\n\tvEmissiveScaled = aEmissiveScaled;\n\tvAlpha = aAlpha;\n' +
+              // Dock-magnify: project the instance CENTRE to NDC and measure the
+              // aspect-corrected screen distance to the cursor, then grow the
+              // local vertex outward in place (before instanceMatrix is applied
+              // in <project_vertex>).
+              '\tvec4 centerClip = projectionMatrix * modelViewMatrix * instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0);\n' +
+              '\tvec2 centerNdc = centerClip.xy / centerClip.w;\n' +
+              '\tfloat dxm = (centerNdc.x - uMouse.x) * uAspect;\n' +
+              '\tfloat dym = (centerNdc.y - uMouse.y);\n' +
+              '\tfloat sdist = sqrt(dxm * dxm + dym * dym);\n' +
+              '\tfloat magnify = sdist < uMagnifyRadius ? 1.0 + uMagnifyStrength * pow(1.0 - sdist / uMagnifyRadius, 2.0) : 1.0;\n' +
+              '\tvMagnify = magnify;\n' +
+              '\ttransformed *= magnify;\n' +
+              // Per-instance floating jitter (cheap hash + sin, ±0.12 x/y, ±0.06 z).
+              '\tfloat s1 = fract(sin(aSeed * 12.9898) * 43758.5453);\n' +
+              '\tfloat s2 = fract(sin(aSeed * 78.2330) * 43758.5453);\n' +
+              '\tfloat s3 = fract(sin(aSeed * 37.7190) * 43758.5453);\n' +
+              '\tvec3 jitterOffset = uJitterAmp * vec3(\n' +
+              '\t\tsin(uTime * 0.9 + s1 * 6.2831) * 0.12,\n' +
+              '\t\tsin(uTime * 1.1 + s2 * 6.2831) * 0.12,\n' +
+              '\t\tsin(uTime * 0.7 + s3 * 6.2831) * 0.06);',
+            )
+            .replace(
+              '#include <project_vertex>',
+              'vec4 mvPosition = vec4( transformed, 1.0 );\n' +
+              '#ifdef USE_INSTANCING\n\tmvPosition = instanceMatrix * mvPosition;\n#endif\n' +
+              '\tmvPosition.xyz += jitterOffset;\n' +
+              '\tmvPosition = modelViewMatrix * mvPosition;\n' +
+              '\tgl_Position = projectionMatrix * mvPosition;',
+            );
+        shader.fragmentShader =
+          'uniform float uEmissiveScale;\n' +
+          'varying vec3 vInstColor;\nvarying float vEmissive;\nvarying float vEmissiveScaled;\nvarying float vAlpha;\nvarying float vMagnify;\n' +
+          shader.fragmentShader
+            .replace(
+              '#include <color_fragment>',
+              '#include <color_fragment>\n\tdiffuseColor.rgb *= vInstColor;\n\tdiffuseColor.a *= vAlpha;',
+            )
+            .replace(
+              '#include <emissivemap_fragment>',
+              '#include <emissivemap_fragment>\n' +
+              '\ttotalEmissiveRadiance += vInstColor * (vEmissive + vEmissiveScaled * uEmissiveScale + (vMagnify - 1.0) * 0.6);',
+            );
+      };
+      return material;
+    }
+
+    // Point-cloud counterpart of makeInstancedDocMaterial. Same inputs (colour,
+    // emissive, alpha, seed) and the same jitter + dock-magnify maths, but one
+    // vertex per doc instead of a sphere, so the GPU rasterises ~80× less. The
+    // round dot is a mask in the fragment shader; brightness feeds the existing
+    // bloom pass exactly like the spheres' emissive did.
+    //
+    // Extra per-point attribute: aScale (baseScale × matched 1.4 × hidden 0) —
+    // the point-cloud stand-in for the instance matrix's scale.
+    const pointsMaterials: THREE.ShaderMaterial[] = [];
+    function makeDocPointsMaterial(): THREE.ShaderMaterial {
+      const material = new THREE.ShaderMaterial({
+        transparent: true,
+        depthWrite: true,
+        uniforms: {
+          uTime: { value: 0 },
+          uMouse: { value: new THREE.Vector2(10, 10) },
+          uAspect: { value: aspect0 },
+          uEmissiveScale: { value: 1.0 },
+          uJitterAmp: { value: prefersReduced ? 0 : 1 },
+          uMagnifyRadius: { value: 0.5 },
+          uMagnifyStrength: { value: 0.6 },
+          uViewportHeight: { value: height },
+        },
+        vertexShader: `
+uniform float uTime;
+uniform vec2 uMouse;
+uniform float uAspect;
+uniform float uEmissiveScale;
+uniform float uJitterAmp;
+uniform float uMagnifyRadius;
+uniform float uMagnifyStrength;
+uniform float uViewportHeight;
+
+attribute vec3 aInstColor;
+attribute float aEmissive;
+attribute float aEmissiveScaled;
+attribute float aAlpha;
+attribute float aSeed;
+attribute float aScale;
+
+varying vec3 vDotColor;
+varying float vDotAlpha;
+varying float vBright;
+
+void main() {
+  // Per-point floating jitter — same hash + amplitudes as the sphere shader.
+  float s1 = fract(sin(aSeed * 12.9898) * 43758.5453);
+  float s2 = fract(sin(aSeed * 78.2330) * 43758.5453);
+  float s3 = fract(sin(aSeed * 37.7190) * 43758.5453);
+  vec3 pos = position + uJitterAmp * vec3(
+    sin(uTime * 0.9 + s1 * 6.2831) * 0.12,
+    sin(uTime * 1.1 + s2 * 6.2831) * 0.12,
+    sin(uTime * 0.7 + s3 * 6.2831) * 0.06);
+
+  vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
+  vec4 clip = projectionMatrix * mvPosition;
+
+  // Dock-magnify: aspect-corrected screen distance from the cursor.
+  vec2 ndc = clip.xy / clip.w;
+  float dxm = (ndc.x - uMouse.x) * uAspect;
+  float dym = ndc.y - uMouse.y;
+  float sdist = sqrt(dxm * dxm + dym * dym);
+  float magnify = sdist < uMagnifyRadius
+    ? 1.0 + uMagnifyStrength * pow(1.0 - sdist / uMagnifyRadius, 2.0)
+    : 1.0;
+
+  vDotColor = aInstColor;
+  vDotAlpha = aAlpha;
+  vBright = aEmissive + aEmissiveScaled * uEmissiveScale + (magnify - 1.0) * 0.6;
+
+  gl_Position = clip;
+  // Match the sphere's world radius (0.05) under perspective: project the
+  // diameter to pixels. aScale == 0 (hidden) yields size 0 → never rasterised.
+  float worldSize = 0.05 * 2.0 * aScale * magnify;
+  float px = worldSize * uViewportHeight * 0.5 * projectionMatrix[1][1] / max(0.0001, -mvPosition.z);
+  gl_PointSize = clamp(px, 0.0, 64.0);
+}`,
+        fragmentShader: `
+varying vec3 vDotColor;
+varying float vDotAlpha;
+varying float vBright;
+
+void main() {
+  // Round, soft-edged dot.
+  float d = length(gl_PointCoord - vec2(0.5));
+  if (d > 0.5) discard;
+  float edge = smoothstep(0.5, 0.34, d);
+  vec3 col = vDotColor * (0.35 + vBright);
+  gl_FragColor = vec4(col, vDotAlpha * edge);
+  #include <tonemapping_fragment>
+  #include <colorspace_fragment>
+}`,
+      });
+      docUniforms.push(material.uniforms as unknown as DocUniforms);
+      pointsMaterials.push(material);
+      return material;
+    }
+
+    // One object per globe (globes are few: 1..4) — an InstancedMesh in
+    // 'spheres' mode, a Points cloud in 'points' mode. Exactly one of
+    // mesh/points is set; everything else in the record is shared, so
+    // rebuildInstances() and updateHoverAndLabels() are mode-agnostic apart
+    // from how a doc's scale is written (instance matrix vs aScale attribute).
+    interface GlobeInstanced {
+      mesh: THREE.InstancedMesh | null;
+      points: THREE.Points | null;
+      /** Whichever of mesh/points is live — for raycasting and disposal. */
+      object: THREE.Object3D;
+      /** Only in 'points' mode: per-point size (baseScale × matched × hidden). */
+      scaleArr: Float32Array | null;
+      scaleAttr: THREE.BufferAttribute | null;
+      docs: MapDocument[];
+      basePositions: THREE.Vector3[];
+      baseScales: Float32Array;
+      emissiveArr: Float32Array;
+      emissiveScaledArr: Float32Array;
+      alphaArr: Float32Array;
+      emissiveAttr: THREE.BufferAttribute;
+      emissiveScaledAttr: THREE.BufferAttribute;
+      alphaAttr: THREE.BufferAttribute;
+      center: THREE.Vector3;
+    }
+    const globeInstanced: GlobeInstanced[] = [];
+    const nodes: { basePos: THREE.Vector3; doc: MapDocument }[] = [];
+    // Monotonic counter across every globe so each instance gets a unique seed.
+    let globalSeed = 0;
 
     // Create globes and their document clouds
     globes.forEach((globe) => {
@@ -282,34 +537,119 @@ export function Map() {
         });
       }
 
-      // Nodes for this globe
-      globe.documents.forEach((doc, i) => {
-        const color = TYPE_COLORS_NUM[doc.type] || TYPE_COLORS_NUM.unknown;
-        const baseScale = ageScale(doc.created_at);
-        const material = new THREE.MeshStandardMaterial({
-          color,
-          metalness: 0.3,
-          roughness: 0.2,
-          emissive: color,
-          emissiveIntensity: 0.8,
-          transparent: true,
-          opacity: 1.0,
-        });
+      // Nodes for this globe — one InstancedMesh (spheres) or one Points cloud.
+      const docs = globe.documents;
+      const count = docs.length;
+      const cap = Math.max(1, count);
+      const usePoints = renderMode === 'points';
+      const geometry = usePoints ? new THREE.BufferGeometry() : nodeGeometry.clone();
+      let mesh: THREE.InstancedMesh | null = null;
+      if (!usePoints) {
+        const material = makeInstancedDocMaterial();
+        mesh = new THREE.InstancedMesh(geometry, material, cap);
+        mesh.count = count;
+        mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+        mesh.frustumCulled = false;
+      }
 
-        const mesh = new THREE.Mesh(nodeGeometry, material);
+      const colorArr = new Float32Array(cap * 3);
+      const emissiveArr = new Float32Array(cap);
+      const emissiveScaledArr = new Float32Array(cap);
+      const alphaArr = new Float32Array(cap);
+      const seedArr = new Float32Array(cap);
+      const baseScales = new Float32Array(cap);
+      const basePositions: THREE.Vector3[] = [];
+      // Points mode carries position + size as plain attributes (no matrices).
+      const posArr = usePoints ? new Float32Array(cap * 3) : null;
+      const scaleArr = usePoints ? new Float32Array(cap) : null;
+      const col = new THREE.Color();
+
+      for (let i = 0; i < count; i++) {
+        const doc = docs[i];
+        const colorNum = TYPE_COLORS_NUM[doc.type] || TYPE_COLORS_NUM.unknown;
+        baseScales[i] = ageScale(doc.created_at);
+        col.setHex(colorNum);
+        colorArr[i * 3] = col.r;
+        colorArr[i * 3 + 1] = col.g;
+        colorArr[i * 3 + 2] = col.b;
+        emissiveArr[i] = 0.0;
+        emissiveScaledArr[i] = 0.5;
+        alphaArr[i] = 1.0;
+        // Per-instance jitter seed — a large well-spread number so the GLSL
+        // sin-hash gives each dot a distinct floating phase.
+        seedArr[i] = (globalSeed++) * 0.6180339887 + 1.0;
         const z = doc.z != null ? doc.z : (xxhash(7, i) - 0.5) * 2;
         const basePos = new THREE.Vector3(
           globe.center.x + doc.x * 8,
           globe.center.y + doc.y * 8,
           globe.center.z + z * 8,
         );
-        mesh.position.copy(basePos);
-        mesh.userData = { doc, basePos, baseScale, globeKey: globe.key };
+        basePositions.push(basePos);
+        nodes.push({ basePos, doc });
+        if (posArr && scaleArr) {
+          posArr[i * 3] = basePos.x;
+          posArr[i * 3 + 1] = basePos.y;
+          posArr[i * 3 + 2] = basePos.z;
+          scaleArr[i] = baseScales[i];
+        } else if (mesh) {
+          instDummy.position.copy(basePos);
+          instDummy.scale.setScalar(baseScales[i]);
+          instDummy.rotation.set(0, 0, 0);
+          instDummy.updateMatrix();
+          mesh.setMatrixAt(i, instDummy.matrix);
+        }
+      }
+
+      // Points mode uses plain BufferAttributes (one value per vertex); sphere
+      // mode uses InstancedBufferAttributes (one value per instance).
+      const mk1 = (arr: Float32Array): THREE.BufferAttribute => {
+        const a = usePoints
+          ? new THREE.BufferAttribute(arr, 1)
+          : new THREE.InstancedBufferAttribute(arr, 1);
+        a.setUsage(THREE.DynamicDrawUsage);
+        return a;
+      };
+      const emissiveAttr = mk1(emissiveArr);
+      const emissiveScaledAttr = mk1(emissiveScaledArr);
+      const alphaAttr = mk1(alphaArr);
+      geometry.setAttribute(
+        'aInstColor',
+        usePoints
+          ? new THREE.BufferAttribute(colorArr, 3)
+          : new THREE.InstancedBufferAttribute(colorArr, 3),
+      );
+      geometry.setAttribute('aEmissive', emissiveAttr);
+      geometry.setAttribute('aEmissiveScaled', emissiveScaledAttr);
+      geometry.setAttribute('aAlpha', alphaAttr);
+      geometry.setAttribute(
+        'aSeed',
+        usePoints
+          ? new THREE.BufferAttribute(seedArr, 1)
+          : new THREE.InstancedBufferAttribute(seedArr, 1),
+      );
+
+      let points: THREE.Points | null = null;
+      let scaleAttr: THREE.BufferAttribute | null = null;
+      if (usePoints && posArr && scaleArr) {
+        geometry.setAttribute('position', new THREE.BufferAttribute(posArr, 3));
+        scaleAttr = mk1(scaleArr);
+        geometry.setAttribute('aScale', scaleAttr);
+        geometry.setDrawRange(0, count);
+        points = new THREE.Points(geometry, makeDocPointsMaterial());
+        points.frustumCulled = false;
+        scene.add(points);
+      } else if (mesh) {
+        mesh.instanceMatrix.needsUpdate = true;
         scene.add(mesh);
-        meshes.push(mesh);
+      }
+
+      globeInstanced.push({
+        mesh, points, object: (points ?? mesh)!, scaleArr, scaleAttr,
+        docs, basePositions, baseScales, emissiveArr, emissiveScaledArr, alphaArr,
+        emissiveAttr, emissiveScaledAttr, alphaAttr, center: globe.center,
       });
     });
-    meshesRef.current = meshes;
+    nodesRef.current = nodes;
 
     // Raycaster
     const raycaster = new THREE.Raycaster();
@@ -331,10 +671,21 @@ export function Map() {
         mouse.x = ((e.clientX - rect.left) / width) * 2 - 1;
         mouse.y = -((e.clientY - rect.top) / height) * 2 + 1;
         raycaster.setFromCamera(mouse, camera);
-        const intersects = raycaster.intersectObjects(meshes);
+        // Points hit-testing needs a world-space radius; spheres have real
+        // geometry. In points mode a Points intersection reports `index`, an
+        // InstancedMesh reports `instanceId` — both index into rec.docs.
+        raycaster.params.Points.threshold = 0.15;
+        const intersects = raycaster.intersectObjects(
+          globeInstanced.map(r => r.object),
+        );
         if (intersects.length > 0) {
-          const doc = intersects[0].object.userData.doc as MapDocument;
-          navigate(`/doc/${encodeURIComponent(doc.id)}`);
+          const hit = intersects[0];
+          const rec = globeInstanced.find(r => r.object === hit.object);
+          const idx = hit.instanceId ?? hit.index;
+          if (rec && idx != null) {
+            const doc = rec.docs[idx];
+            if (doc) navigate(`/doc/${encodeURIComponent(doc.id)}`);
+          }
         }
       }
       isDragging.current = false;
@@ -366,7 +717,7 @@ export function Map() {
 
     function onMouseLeave() {
       isDragging.current = false;
-      setHoveredDoc(null);
+      showTooltip(null);
       mouseNDC.current.set(10, 10);
     }
 
@@ -383,6 +734,8 @@ export function Map() {
       camera.updateProjectionMatrix();
       renderer.setSize(w, h);
       composer.setSize(w, h);
+      // Point sizes are computed in pixels from the viewport height.
+      for (const m of pointsMaterials) m.uniforms.uViewportHeight.value = h;
     }
     window.addEventListener('resize', onResize);
 
@@ -420,6 +773,39 @@ export function Map() {
     fpsEl.style.cssText = 'position:absolute;top:8px;right:8px;font-size:11px;font-mono;color:#888;z-index:10;';
     container.appendChild(fpsEl);
 
+    // Hover tooltip as a direct-DOM element (NOT React state): updating it on
+    // every hover change avoids re-rendering the whole Map component ~15×/sec
+    // while the cursor sweeps the dense dot cloud — that React churn was the
+    // remaining hover stutter.
+    const tooltipEl = document.createElement('div');
+    tooltipEl.className = 'fixed bottom-6 left-1/2 -translate-x-1/2 rounded-[10px] px-5 py-3 z-20 pointer-events-none backdrop-blur-xl border border-white/[0.08] text-center';
+    tooltipEl.style.background = 'rgba(10, 10, 20, 0.75)';
+    tooltipEl.style.display = 'none';
+    const ttType = document.createElement('div');
+    ttType.className = 'text-[11px] font-semibold uppercase tracking-wide mb-1';
+    const ttTitle = document.createElement('div');
+    ttTitle.className = 'text-sm text-text-primary font-medium';
+    const ttConcepts = document.createElement('div');
+    ttConcepts.className = 'text-[11px] text-text-muted mt-1';
+    tooltipEl.append(ttType, ttTitle, ttConcepts);
+    container.appendChild(tooltipEl);
+    function showTooltip(doc: MapDocument | null) {
+      if (doc) {
+        ttType.textContent = doc.type;
+        ttType.style.color = TYPE_COLORS[doc.type] || TYPE_COLORS.unknown;
+        ttTitle.textContent = extractTitle(doc.source_file);
+        if (doc.concepts.length > 0) {
+          ttConcepts.textContent = doc.concepts.slice(0, 4).join(', ');
+          ttConcepts.style.display = '';
+        } else {
+          ttConcepts.style.display = 'none';
+        }
+        tooltipEl.style.display = '';
+      } else {
+        tooltipEl.style.display = 'none';
+      }
+    }
+
     // Animation loop
     let time = 0;
     const dt = 1 / 60;
@@ -429,6 +815,172 @@ export function Map() {
     // when the dot under the cursor actually changes.
     let lastHoverId: string | null = null;
     const HOVER_DIST = 0.025; // screen-space radius treated as "cursor on this dot"
+    let hoverFrame = 0; // throttle counter for the CPU hover/label pass
+
+    // Rebuild the STATIC per-instance state (matrices + emissive/alpha) from the
+    // current search / filter / visibility / hover refs. Runs ONCE on setup and
+    // again whenever those change (via rebuildRef + a React effect) — never per
+    // frame. Jitter + dock-magnify are handled entirely on the GPU, so matrices
+    // carry only position, base scale, match-scale (1.4x) and hidden scale-0.
+    function rebuildInstances() {
+      const matches = matchIdsRef.current;
+      const hasSearch = matches.size > 0;
+      const visTypes = visibleTypesRef.current;
+      const projFilter = selectedProjectRef.current;
+      for (let gi = 0; gi < globeInstanced.length; gi++) {
+        const rec = globeInstanced[gi];
+        const { mesh, scaleArr, docs, basePositions, baseScales, emissiveArr, emissiveScaledArr, alphaArr } = rec;
+        const count = docs.length;
+        // Write a doc's size: point-cloud size attribute, or instance matrix.
+        const setScale = (i: number, scale: number) => {
+          if (scaleArr) {
+            scaleArr[i] = scale;
+          } else if (mesh) {
+            instDummy.position.copy(basePositions[i]);
+            instDummy.scale.setScalar(scale);
+            instDummy.rotation.set(0, 0, 0);
+            instDummy.updateMatrix();
+            mesh.setMatrixAt(i, instDummy.matrix);
+          }
+        };
+        for (let i = 0; i < count; i++) {
+          const doc = docs[i];
+          const isHidden = !visTypes.has(doc.type);
+          if (isHidden) {
+            setScale(i, 0);
+            emissiveArr[i] = 0;
+            emissiveScaledArr[i] = 0;
+            alphaArr[i] = 0;
+            continue;
+          }
+          const isMatched = hasSearch && (matches.has(doc.id) || (doc.chunk_ids?.some(cid => matches.has(cid)) ?? false));
+          const isProjectFiltered = projFilter != null && doc.project !== projFilter && doc.project != null;
+          const isFaded = (hasSearch && !isMatched) || isProjectFiltered;
+
+          let scale = baseScales[i];
+          if (isMatched) scale *= 1.4;
+          setScale(i, scale);
+
+          // Emissive is split so the shader can apply the per-frame zoom factor
+          // (uEmissiveScale) without any CPU work:
+          //   final = aEmissive + aEmissiveScaled * uEmissiveScale + magnify boost
+          let unscaled = 0, scaled = 0;
+          if (isFaded) unscaled = 0.1;      // faded: fixed 0.1 (unscaled)
+          else scaled = 0.5;                // normal: 0.5 * zoom
+          if (isMatched) { unscaled = 0; scaled = 1.0; } // matched: 1.0 * zoom
+          // Hover glow is handled by the GPU magnify boost (the dot under the
+          // cursor grows + brightens), so no per-instance hover override here —
+          // that would force a full rebuild on every hover change.
+          emissiveArr[i] = unscaled;
+          emissiveScaledArr[i] = scaled;
+          alphaArr[i] = isFaded ? 0.05 : 1.0;
+        }
+        if (mesh) mesh.instanceMatrix.needsUpdate = true;
+        if (rec.scaleAttr) rec.scaleAttr.needsUpdate = true;
+        rec.emissiveAttr.needsUpdate = true;
+        rec.emissiveScaledAttr.needsUpdate = true;
+        rec.alphaAttr.needsUpdate = true;
+      }
+    }
+    rebuildRef.current = rebuildInstances;
+    rebuildInstances();
+
+    // Throttled + back-face-culled CPU pass: derive hover + the proximity-label
+    // list. Only front-facing, visible, non-faded dots are projected (roughly
+    // half the cloud), and this runs at most every 4th frame — the projection
+    // O(n) loop no longer runs every frame. Uses STATIC base positions (the
+    // ±0.12 GPU jitter is below the hover threshold, so this is equivalent).
+    const camPos = new THREE.Vector3();
+    function updateHoverAndLabels() {
+      const matches = matchIdsRef.current;
+      const hasSearch = matches.size > 0;
+      const visTypes = visibleTypesRef.current;
+      const projFilter = selectedProjectRef.current;
+      const mx = mouseNDC.current.x;
+      const my = mouseNDC.current.y;
+      camPos.copy(camera.position);
+
+      const MAX_LABELS = labelPool.length;
+      const nearby: { screenDist: number; ndcX: number; ndcY: number; doc: MapDocument; color: string }[] = [];
+      for (let gi = 0; gi < globeInstanced.length; gi++) {
+        const rec = globeInstanced[gi];
+        const { docs, basePositions, center } = rec;
+        const count = docs.length;
+        for (let i = 0; i < count; i++) {
+          const doc = docs[i];
+          if (!visTypes.has(doc.type)) continue;
+          const basePos = basePositions[i];
+          // Back-face cull: skip dots on the far side of their globe (outward
+          // normal from globe centre pointing away from the camera).
+          const nx = basePos.x - center.x, ny = basePos.y - center.y, nz = basePos.z - center.z;
+          const vx = camPos.x - basePos.x, vy = camPos.y - basePos.y, vz = camPos.z - basePos.z;
+          if (nx * vx + ny * vy + nz * vz <= 0) continue;
+
+          const isMatched = hasSearch && (matches.has(doc.id) || (doc.chunk_ids?.some(cid => matches.has(cid)) ?? false));
+          const isProjectFiltered = projFilter != null && doc.project !== projFilter && doc.project != null;
+          const isFaded = (hasSearch && !isMatched) || isProjectFiltered;
+          if (isFaded) continue;
+
+          tempVec.copy(basePos).project(camera);
+          if (tempVec.z >= 1) continue;
+          const screenDist = Math.sqrt(
+            Math.pow((tempVec.x - mx) * aspectRatio, 2) +
+            Math.pow(tempVec.y - my, 2)
+          );
+          // Bounded insert: keep only the MAX_LABELS nearest, sorted. Over the
+          // dense centre thousands of dots fall within 0.5 — pushing + sorting
+          // all of them was the hover stutter. Insertion into a ≤8 array keeps
+          // it O(n·8) with no large allocation and no sort of thousands.
+          if (screenDist < 0.5 &&
+              (nearby.length < MAX_LABELS || screenDist < nearby[nearby.length - 1].screenDist)) {
+            let lo = 0, hi = nearby.length;
+            while (lo < hi) {
+              const mid = (lo + hi) >> 1;
+              if (nearby[mid].screenDist < screenDist) lo = mid + 1; else hi = mid;
+            }
+            nearby.splice(lo, 0, {
+              screenDist,
+              ndcX: tempVec.x,
+              ndcY: tempVec.y,
+              doc,
+              color: TYPE_COLORS[doc.type] || TYPE_COLORS.unknown,
+            });
+            if (nearby.length > MAX_LABELS) nearby.pop();
+          }
+        }
+      }
+      // nearby is already sorted by the bounded insertion above.
+      for (let li = 0; li < labelPool.length; li++) {
+        const el = labelPool[li];
+        if (li < nearby.length) {
+          const n = nearby[li];
+          const px = (n.ndcX + 1) * 0.5 * width;
+          const py = (1 - (n.ndcY + 1) * 0.5) * height;
+          const opacity = Math.max(0.3, 1 - n.screenDist / 0.5);
+          el.textContent = extractTitle(n.doc.source_file);
+          el.style.left = `${px + 10}px`;
+          el.style.top = `${py - 8}px`;
+          el.style.opacity = String(opacity);
+          el.style.color = n.color;
+          el.style.display = '';
+        } else {
+          el.style.display = 'none';
+        }
+      }
+
+      // Derive hover from the nearest projected node. Update the DOM tooltip +
+      // cursor only on change — no React state, so no component re-render.
+      if (!isDragging.current) {
+        const top = nearby.length > 0 ? nearby[0] : null;
+        const hoverDoc = top && top.screenDist < HOVER_DIST ? top.doc : null;
+        const hoverId = hoverDoc ? hoverDoc.id : null;
+        if (hoverId !== lastHoverId) {
+          lastHoverId = hoverId;
+          showTooltip(hoverDoc);
+          container!.style.cursor = hoverDoc ? 'pointer' : 'grab';
+        }
+      }
+    }
 
     function animate() {
       time += 0.016;
@@ -492,101 +1044,25 @@ export function Map() {
         }
       });
 
-      // Update nodes
-      const matches = matchIdsRef.current;
-      const hasSearch = matches.size > 0;
-      const hovered = hoveredDocRef.current;
-      const visTypes = visibleTypesRef.current;
-      const projFilter = selectedProjectRef.current;
-      const mx = mouseNDC.current.x;
-      const my = mouseNDC.current.y;
-
-      const nearby: { screenDist: number; ndcX: number; ndcY: number; doc: MapDocument; color: string }[] = [];
-
-      meshes.forEach((mesh, i) => {
-        const doc = mesh.userData.doc as MapDocument;
-        const basePos = mesh.userData.basePos as THREE.Vector3;
-        const baseScale = mesh.userData.baseScale as number;
-        const mat = mesh.material as THREE.MeshStandardMaterial;
-        const isHidden = !visTypes.has(doc.type);
-        const isMatched = hasSearch && (matches.has(doc.id) || (doc.chunk_ids?.some(cid => matches.has(cid)) ?? false));
-        const isProjectFiltered = projFilter != null && doc.project !== projFilter && doc.project != null;
-        const isFaded = (hasSearch && !isMatched) || isProjectFiltered;
-
-        mesh.visible = !isHidden;
-        if (isHidden) return;
-
-        if (!prefersReduced) {
-          const t = time * 0.15;
-          const dx = fractalNoise(t + i * 0.17, 2, 42) * 0.12;
-          const dy = fractalNoise(t + i * 0.23, 2, 97) * 0.12;
-          const dz = fractalNoise(t + i * 0.31, 2, 163) * 0.06;
-          mesh.position.set(basePos.x + dx, basePos.y + dy, basePos.z + dz);
-        }
-
-        tempVec.copy(mesh.position).project(camera);
-        const screenDist = Math.sqrt(
-          Math.pow((tempVec.x - mx) * aspectRatio, 2) +
-          Math.pow(tempVec.y - my, 2)
-        );
-        const magnifyRadius = 0.5;
-        const magnifyFactor = screenDist < magnifyRadius
-          ? 1 + 0.6 * Math.pow(1 - screenDist / magnifyRadius, 2)
-          : 1;
-
-        let scale = baseScale * magnifyFactor;
-        if (isMatched) scale *= 1.4;
-        mesh.scale.setScalar(scale);
-
-        const emissiveScale = Math.max(0.2, Math.min(1.0, 20 / dist));
-        const baseGlow = isFaded ? 0.1 : 0.5 * emissiveScale;
-        mat.emissiveIntensity = baseGlow + (magnifyFactor - 1) * 0.6;
-        if (isMatched) mat.emissiveIntensity = 1.0 * emissiveScale;
-        if (hovered?.id === doc.id) mat.emissiveIntensity = 1.2;
-
-        mat.opacity = isFaded ? 0.05 : 1.0;
-
-        if (!isFaded && screenDist < 0.5 && tempVec.z < 1) {
-          nearby.push({
-            screenDist,
-            ndcX: tempVec.x,
-            ndcY: tempVec.y,
-            doc,
-            color: TYPE_COLORS[doc.type] || TYPE_COLORS.unknown,
-          });
-        }
-      });
-
-      nearby.sort((a, b) => a.screenDist - b.screenDist);
-      for (let li = 0; li < labelPool.length; li++) {
-        const el = labelPool[li];
-        if (li < nearby.length) {
-          const n = nearby[li];
-          const px = (n.ndcX + 1) * 0.5 * width;
-          const py = (1 - (n.ndcY + 1) * 0.5) * height;
-          const opacity = Math.max(0.3, 1 - n.screenDist / 0.5);
-          el.textContent = extractTitle(n.doc.source_file);
-          el.style.left = `${px + 10}px`;
-          el.style.top = `${py - 8}px`;
-          el.style.opacity = String(opacity);
-          el.style.color = n.color;
-          el.style.display = '';
-        } else {
-          el.style.display = 'none';
-        }
+      // Per-frame instance work is now ~free: only push a handful of scalar
+      // uniforms into each globe material. Jitter + dock-magnify (and their
+      // emissive boost) run entirely on the GPU; the instance matrices +
+      // emissive/alpha buffers are static (rebuilt only on state change).
+      const emissiveScale = Math.max(0.2, Math.min(1.0, 20 / dist));
+      const aspectNow = camera.aspect;
+      for (let u = 0; u < docUniforms.length; u++) {
+        const un = docUniforms[u];
+        un.uTime.value = time;
+        un.uMouse.value.set(mouseNDC.current.x, mouseNDC.current.y);
+        un.uEmissiveScale.value = emissiveScale;
+        un.uAspect.value = aspectNow;
       }
 
-      // Derive hover from the nearest projected node (reuses the work above —
-      // no raycast). Push to React state + cursor only on change.
-      if (!isDragging.current) {
-        const top = nearby.length > 0 ? nearby[0] : null;
-        const hoverDoc = top && top.screenDist < HOVER_DIST ? top.doc : null;
-        const hoverId = hoverDoc ? hoverDoc.id : null;
-        if (hoverId !== lastHoverId) {
-          lastHoverId = hoverId;
-          setHoveredDoc(hoverDoc);
-          container!.style.cursor = hoverDoc ? 'pointer' : 'grab';
-        }
+      // Hover + proximity labels: CPU work, throttled to every 4th frame
+      // (~15/sec) and back-face culled inside updateHoverAndLabels().
+      hoverFrame++;
+      if (hoverFrame % 4 === 0) {
+        updateHoverAndLabels();
       }
 
       composer.render();
@@ -607,9 +1083,14 @@ export function Map() {
       container.removeEventListener('mouseleave', onMouseLeave);
       window.removeEventListener('resize', onResize);
 
-      meshes.forEach((mesh) => {
-        (mesh.material as THREE.Material).dispose();
-        scene.remove(mesh);
+      globeInstanced.forEach((rec) => {
+        const obj = rec.object;
+        scene.remove(obj);
+        (obj as THREE.Mesh | THREE.Points).geometry?.dispose();
+        const mat = (obj as THREE.Mesh | THREE.Points).material;
+        if (Array.isArray(mat)) mat.forEach(m => m.dispose());
+        else mat?.dispose();
+        rec.mesh?.dispose();
       });
       nodeGeometry.dispose();
       // Dispose globe geometries
@@ -624,7 +1105,10 @@ export function Map() {
       }
       renderer.dispose();
     };
-  }, [globes, navigate]);
+    // renderMode is a dependency: switching sphere <-> point cloud swaps the
+    // scene objects and their materials, so the whole scene is rebuilt. That is
+    // fine — mode changes are user-initiated and rare.
+  }, [globes, navigate, renderMode]);
 
   // Search
   async function handleSearch(e: React.FormEvent) {
@@ -651,8 +1135,7 @@ export function Map() {
     }
   }
 
-  // Total documents across all globes
-  const totalDocs = globes.reduce((sum, g) => sum + g.documents.length, 0);
+  // (totalDocs is computed above — it also drives the render-mode auto-switch.)
 
   // Type counts across all globes
   const typeCounts = globes.reduce((acc, g) => {
@@ -715,22 +1198,8 @@ export function Map() {
           </div>
         )}
 
-        {hoveredDoc && (
-          <div
-            className="fixed bottom-6 left-1/2 -translate-x-1/2 rounded-[10px] px-5 py-3 z-20 pointer-events-none backdrop-blur-xl border border-white/[0.08] text-center"
-            style={{ background: 'rgba(10, 10, 20, 0.75)' }}
-          >
-            <div className="text-[11px] font-semibold uppercase tracking-wide mb-1" style={{ color: TYPE_COLORS[hoveredDoc.type] }}>
-              {hoveredDoc.type}
-            </div>
-            <div className="text-sm text-text-primary font-medium">{extractTitle(hoveredDoc.source_file)}</div>
-            {hoveredDoc.concepts.length > 0 && (
-              <div className="text-[11px] text-text-muted mt-1">
-                {hoveredDoc.concepts.slice(0, 4).join(', ')}
-              </div>
-            )}
-          </div>
-        )}
+        {/* Hover tooltip is rendered via direct DOM (see showTooltip in the
+            three.js effect) to avoid a React re-render on every hover change. */}
 
         <div
           className="absolute bottom-4 left-4 flex gap-1 rounded-[10px] px-2 py-1.5 text-[11px] text-text-secondary backdrop-blur-xl border border-white/[0.08]"
@@ -781,10 +1250,11 @@ export function Map() {
           >R</button>
           <button
             onClick={() => {
-              const meshes = meshesRef.current;
+              const nodes = nodesRef.current;
+              const visTypes = visibleTypesRef.current;
               let cx = 0, cy = 0, cz = 0, count = 0;
-              meshes.forEach(m => {
-                if (m.visible) { cx += m.position.x; cy += m.position.y; cz += m.position.z; count++; }
+              nodes.forEach(n => {
+                if (visTypes.has(n.doc.type)) { cx += n.basePos.x; cy += n.basePos.y; cz += n.basePos.z; count++; }
               });
               if (count > 0) {
                 targetCenter.current.set(cx / count, cy / count, cz / count);
@@ -795,6 +1265,20 @@ export function Map() {
             style={{ background: 'rgba(10, 10, 20, 0.7)' }}
             title="Center on visible dots"
           >C</button>
+          <button
+            onClick={toggleRenderMode}
+            className="w-9 h-9 rounded-[10px] text-text-primary text-sm font-medium cursor-pointer flex items-center justify-center backdrop-blur-xl border border-white/[0.08] transition-all duration-200 hover:border-accent hover:text-accent"
+            style={{
+              background: 'rgba(10, 10, 20, 0.7)',
+              ...(modeOverride ? { borderColor: 'rgba(96, 165, 250, 0.5)' } : {}),
+            }}
+            title={
+              `Render: ${renderMode === 'points' ? 'point cloud' : 'spheres'}` +
+              ` — ${modeOverride ? 'pinned' : `auto (${totalDocs.toLocaleString()} docs)`}.` +
+              ` Click to switch to ${renderMode === 'points' ? 'spheres' : 'point cloud'}.` +
+              ` Point cloud draws 1 vertex per doc instead of a sphere — much faster on large maps.`
+            }
+          >{renderMode === 'points' ? '·' : '●'}</button>
         </div>
       </div>
 

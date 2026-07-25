@@ -3,5 +3,5 @@ import { ping } from '../api/oracle';
 import menuConfig from '../../menu.json';
 
 export function Header() {
-  return <AppHeader brandLabel="ARRA 🔮Racle — Schedule" ping={ping} menuConfig={menuConfig} />;
+  return <AppHeader brandLabel="ARRA Oracle 🔮 — Schedule" ping={ping} menuConfig={menuConfig} />;
 }

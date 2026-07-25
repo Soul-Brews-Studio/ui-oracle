@@ -1,0 +1,8 @@
+# Oracle Session Metrics
+
+Rule (parent CLAUDE.md §"Self-Evaluation Loop"): same friction 3 sessions → fix root cause, not another workaround.
+
+| when | session | done | stuck | win | friction | error |
+|---|---|---|---|---|---|---|
+| 2026-05-31 04:54 | cd5c5bd3 | combined bundle apps/all shipped+deployed; iframe hub built then removed; nav+host fixes; indexer build fix; always-localhost default; 4 PRs merged (#91,#93,#94,#95); all 8 apps redeployed | studio.* vs app.*/studio domain question (open, needs user) | One Vite bundle mounts all 7 apps by path at app.buildwithoracle.com, each still standalone-deployable (dual-mode runtime base context) | bun --cwd broken in repo's bun canary (root deploy/build scripts dead → use --filter); wrangler OAuth expired across midnight + login state-mismatch on port 8976; rtk grep hook corrupts subagent grep output | declared combined nav "working" on build-green + grep-invariant without rendering it — user found cross-origin escape; had dev-browser available, used it only after the bug report |
+| 2026-05-31 05:18 | cd5c5bd3 | studio.* serves combined; studio-at-root (no /studio prefix); host self-heal=always-localhost (browser-verified); diagnosed blank-screen-on-reload | 5 files deployed but uncommitted; worker no-cache fix for blank screen not yet applied | studio.* + app.* both serve the hub with studio at root; self-heal guarantees localhost default | rapid 4× redeploys + index.html max-age=3600 → blank screen for mid-session users; dev-browser start/stop churn → "Connecting" stalls | redeployed one live worker 4× in 30 min with HTML cache on, manufacturing the user's blank-screen; curl-200 checks blind to stale browser cache |

@@ -26,9 +26,29 @@ export function buildPlanetsGraph(
   _stats?: Stats,
   now: number = Date.now(),
 ): PlanetsGraph {
-  const centers = placeProjectsOnSphere(projects);
   const docsByProject = groupDocsByProject(apiDocs);
 
+  // "Unsorted" (docs with no project) used to be pinned at the world origin
+  // with a fixed radius. That is the one place it must not be: real clusters
+  // are laid out on a Fibonacci shell whose radius grows with the corpus
+  // (~90 units at 35k docs), while the camera orbits the origin and dollies out
+  // to at most 40 — and a cluster label only draws within 35 units of the
+  // camera. So the origin cluster sat permanently in front of the lens and was
+  // the ONLY label that could ever render, while every real project stayed
+  // unlabelled beyond reach. Seat Unsorted on the same shell as everything else.
+  const unknownDocs = docsByProject.get(UNKNOWN_CLUSTER);
+  const layoutProjects: OracleProject[] =
+    unknownDocs && unknownDocs.length > 0
+      ? [
+          ...projects,
+          { project: UNKNOWN_CLUSTER, docs: unknownDocs.length, types: 0, last_indexed: 0 },
+        ]
+      : projects;
+
+  const centers = placeProjectsOnSphere(layoutProjects);
+
+  // Safety net: if the layout could not seat it (e.g. no projects at all),
+  // still give Unsorted somewhere to live rather than dropping its documents.
   if (docsByProject.has(UNKNOWN_CLUSTER) && !centers.has(UNKNOWN_CLUSTER)) {
     centers.set(UNKNOWN_CLUSTER, { cx: 0, cy: 0, cz: 0, radius: 6 });
   }

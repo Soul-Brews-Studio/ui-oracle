@@ -1,31 +1,55 @@
 import { useCallback, useEffect, useState } from 'react';
 import { API_BASE } from '../api/oracle';
-import { clearStoredHost, hostLabel, setStoredHost } from '../api/host';
+import { clearStoredHost, hostLabel, isManuallyDisconnected, setManuallyDisconnected, setStoredHost } from '../api/host';
 
-type GateState = 'probing' | 'ok' | 'unreachable';
+/**
+ * 'disconnected' — the user clicked Disconnect. No probe has run (or will
+ *                  run) for this backend until they explicitly hit Connect —
+ *                  this is a deliberate stop, not a connectivity failure, so
+ *                  it must never be confused with 'down'/'stuck' messaging.
+ * 'down'          — nothing answered the connection at all.
+ * 'stuck'         — something IS listening but never served a healthy
+ *                  response. A wedged backend holds its port open, so
+ *                  treating that as "not installed" sends people to reinstall
+ *                  when they need to restart.
+ */
+type GateState = 'probing' | 'ok' | 'down' | 'stuck' | 'disconnected';
 
-const PROBE_TIMEOUT_MS = 3000;
+const PROBE_TIMEOUT_MS = 5000;
 
-async function probeBackend(): Promise<boolean> {
+async function probeBackend(): Promise<Exclude<GateState, 'probing' | 'disconnected'>> {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), PROBE_TIMEOUT_MS);
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, PROBE_TIMEOUT_MS);
   try {
     const res = await fetch(`${API_BASE}/health`, { signal: controller.signal });
-    return res.ok;
+    // Any response means the process is alive and reachable — a non-OK status
+    // is a sick backend, not a missing one.
+    return res.ok ? 'ok' : 'stuck';
   } catch {
-    return false;
+    // Timed out => the socket was accepted but nothing came back (hung).
+    // Immediate failure => refused / DNS / blocked before any exchange.
+    return timedOut ? 'stuck' : 'down';
   } finally {
     clearTimeout(timer);
   }
 }
 
 export function BackendGate({ children }: { children: React.ReactNode }) {
-  const [state, setState] = useState<GateState>('probing');
+  const [state, setState] = useState<GateState>(
+    isManuallyDisconnected() ? 'disconnected' : 'probing',
+  );
 
   const probe = useCallback(async () => {
+    if (isManuallyDisconnected()) {
+      setState('disconnected');
+      return;
+    }
     setState('probing');
-    const ok = await probeBackend();
-    setState(ok ? 'ok' : 'unreachable');
+    setState(await probeBackend());
   }, []);
 
   useEffect(() => {
@@ -43,10 +67,65 @@ export function BackendGate({ children }: { children: React.ReactNode }) {
     );
   }
 
-  return <UnreachableLanding onRetry={probe} />;
+  if (state === 'disconnected') {
+    return <DisconnectedLanding onConnect={() => { setManuallyDisconnected(false); probe(); }} />;
+  }
+
+  return <UnreachableLanding onRetry={probe} state={state} />;
 }
 
-function UnreachableLanding({ onRetry }: { onRetry: () => void }) {
+function DisconnectedLanding({ onConnect }: { onConnect: () => void }) {
+  const handleChangeHost = () => {
+    const current = hostLabel();
+    const next = window.prompt(
+      'Enter a new host (e.g. localhost:47778, http://mba.wg:47778). Leave empty to use default.',
+      current.replace(' (default)', ''),
+    );
+    if (next === null) return;
+    setManuallyDisconnected(false);
+    const trimmed = next.trim();
+    if (trimmed === '') clearStoredHost();
+    else setStoredHost(trimmed);
+    window.location.reload();
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center p-6">
+      <div className="bg-bg-card border border-border rounded-2xl p-10 max-w-[560px] w-full text-center">
+        <h1 className="text-2xl font-semibold text-text-primary mb-3">Disconnected</h1>
+        <p className="text-text-secondary mb-6">
+          You disconnected from the Oracle backend. Nothing will load until you
+          reconnect — this app will not probe any host in the meantime.
+        </p>
+        <p className="text-text-secondary text-xs mb-6">
+          Will reconnect to: <code className="text-accent">{hostLabel()}</code>
+        </p>
+        <div className="flex flex-wrap gap-3 justify-center">
+          <button
+            onClick={onConnect}
+            className="px-4 py-2 rounded-lg bg-accent text-white text-sm font-medium hover:opacity-90"
+          >
+            Connect
+          </button>
+          <button
+            onClick={handleChangeHost}
+            className="px-4 py-2 rounded-lg border border-border text-text-primary text-sm font-medium hover:bg-bg-hover"
+          >
+            Change host
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function UnreachableLanding({
+  onRetry,
+  state,
+}: {
+  onRetry: () => void;
+  state: 'down' | 'stuck';
+}) {
   const handleChangeHost = () => {
     const current = hostLabel();
     const next = window.prompt(
@@ -67,29 +146,60 @@ function UnreachableLanding({ onRetry }: { onRetry: () => void }) {
     <div className="min-h-screen flex items-center justify-center p-6">
       <div className="bg-bg-card border border-border rounded-2xl p-10 max-w-[720px] w-full">
         <h1 className="text-3xl font-semibold text-text-primary mb-3">
-          ARRA 🔮Racle needs a local MCP
+          {state === 'stuck'
+            ? 'ARRA Oracle 🔮 is not responding'
+            : 'ARRA Oracle 🔮 needs a local MCP'}
         </h1>
         <p className="text-text-secondary mb-2">
-          This studio is a thin client. Run the backend locally first:
+          {state === 'stuck'
+            ? `Something is listening on this host but did not answer within ${PROBE_TIMEOUT_MS / 1000}s. It is running — do not reinstall it. The server is single-threaded, so one long request (a big index or consolidation) blocks every other request until it finishes, and then everything answers at once. Wait and hit Retry first; only restart if it stays silent.`
+            : 'This studio is a thin client. Run the backend locally first:'}
         </p>
         <p className="text-text-secondary text-xs mb-6">
           Current host: <code className="text-accent">{hostLabel()}</code>
         </p>
 
-        <div className="space-y-4 mb-8">
-          <InstallCard
-            label="1. Backend (MCP server)"
-            command="bunx @soul-brews-studio/arra-oracle"
-          />
-          <InstallCard
-            label="2. CLI"
-            command="bunx @soul-brews-studio/arra-oracle-cli"
-          />
-          <InstallCard
-            label="3. Studio (this UI, served locally)"
-            command="bunx @soul-brews-studio/arra-oracle-studio"
-          />
-        </div>
+        {state === 'stuck' ? (
+          <div className="space-y-4 mb-8">
+            <InstallCard
+              label="1. See what it is busy with (a slow request will show its ms when it finally returns)"
+              command="pm2 logs arra-oracle --lines 40"
+            />
+            <InstallCard
+              label="2. Confirm it is alive — a spinning process sits at ~100% CPU in state R"
+              command="ps -o pid,stat,%cpu,etime -p $(lsof -tiTCP:47778 -sTCP:LISTEN)"
+            />
+            <InstallCard
+              label="3. Last resort — this aborts whatever it was working on"
+              command="pm2 restart arra-oracle"
+            />
+          </div>
+        ) : (
+          <div className="space-y-4 mb-8">
+            {/* Installed straight from GitHub: these packages are not published
+                to npm, so a bare `bunx <name>` 404s. `#alpha` is deliberate —
+                main lags the active branch by a long way. */}
+            <InstallCard
+              label="1. Backend (MCP server)"
+              command="bunx --bun github:Soul-Brews-Studio/arra-oracle-v3#alpha"
+            />
+            <InstallCard
+              label="2. CLI"
+              command="bunx --bun -p github:Soul-Brews-Studio/arra-oracle-v3#alpha arra"
+            />
+          </div>
+        )}
+
+        {state === 'down' && (
+          <p className="text-text-muted text-xs mb-6 leading-relaxed">
+            A browser cannot tell “nothing is running” apart from “the request was
+            blocked before it left the page”. If the backend <em>is</em> up, this is
+            usually Chrome’s private-network rules or CORS on a{' '}
+            <code className="text-accent">localhost</code> host reached from an{' '}
+            <code className="text-accent">https://</code> origin — check it directly
+            with <code className="text-accent">curl {hostLabel().replace(' (default)', '')}/api/v1/health</code>.
+          </p>
+        )}
 
         <div className="flex flex-wrap gap-3">
           <button

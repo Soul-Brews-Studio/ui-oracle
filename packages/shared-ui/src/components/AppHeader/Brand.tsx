@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import type { ReactNode } from 'react';
 
 interface BrandProps {
-  /** Brand text — e.g. "ARRA 🔮Racle" or "ARRA 🔮Racle — Canvas". */
+  /** Brand text — e.g. "ARRA Oracle 🔮" or "ARRA Oracle 🔮 — Canvas". */
   label?: ReactNode;
   /** Path the brand links to. Default "/". */
   to?: string;
@@ -14,7 +14,7 @@ interface BrandProps {
  * Brand link + optional right-adornment (e.g. version chip).
  * Layout and typography are fixed; consumers compose adornments as children.
  */
-export function Brand({ label = 'ARRA 🔮Racle', to = '/', children }: BrandProps) {
+export function Brand({ label = 'ARRA Oracle 🔮', to = '/', children }: BrandProps) {
   return (
     <Link
       to={to}
