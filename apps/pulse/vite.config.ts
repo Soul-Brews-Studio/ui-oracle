@@ -11,6 +11,7 @@ const gitHash = (() => {
   catch { return 'dev' }
 })()
 const appVersion = `v${pkg.version}+${gitHash}`
+const buildDate = new Date().toISOString()
 
 // Dev proxy: forward /api/status + /api/ping to the live nginx-served JSON so
 // local dev behaves the same as production (which goes through worker.ts).
@@ -20,6 +21,7 @@ export default defineConfig({
   plugins: [tailwindcss(), react()],
   define: {
     __APP_VERSION__: JSON.stringify(appVersion),
+    __BUILD_DATE__: JSON.stringify(buildDate),
   },
   server: {
     port: 5180,
