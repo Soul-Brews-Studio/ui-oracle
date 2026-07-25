@@ -84,7 +84,6 @@ export function Map() {
   const [totalOracles, setTotalOracles] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [matchIds, setMatchIds] = useState<Set<string>>(new Set());
-  const [hoveredDoc, setHoveredDoc] = useState<MapDocument | null>(null);
   const [searching, setSearching] = useState(false);
   const [visibleTypes, setVisibleTypes] = useState<Set<string>>(new Set(['principle', 'learning', 'retro']));
   const [selectedProject, setSelectedProject] = useState<string | null>(null);
@@ -92,7 +91,6 @@ export function Map() {
   const visibleTypesRef = useRef<Set<string>>(new Set(['principle', 'learning', 'retro']));
   const selectedProjectRef = useRef<string | null>(null);
   const matchIdsRef = useRef<Set<string>>(new Set());
-  const hoveredDocRef = useRef<MapDocument | null>(null);
   const animRef = useRef<number>(0);
   // Rebuilds the STATIC instance matrices + emissive/alpha attributes whenever
   // search / filter / visibility / hover state changes (NOT per frame).
@@ -119,7 +117,6 @@ export function Map() {
   const dragStart = useRef({ x: 0, y: 0 });
 
   useEffect(() => { matchIdsRef.current = matchIds; }, [matchIds]);
-  useEffect(() => { hoveredDocRef.current = hoveredDoc; }, [hoveredDoc]);
   useEffect(() => { visibleTypesRef.current = visibleTypes; }, [visibleTypes]);
   useEffect(() => { selectedProjectRef.current = selectedProject; }, [selectedProject]);
 
@@ -530,7 +527,7 @@ export function Map() {
 
     function onMouseLeave() {
       isDragging.current = false;
-      setHoveredDoc(null);
+      showTooltip(null);
       mouseNDC.current.set(10, 10);
     }
 
@@ -583,6 +580,39 @@ export function Map() {
     fpsEl.className = 'proximity-label';
     fpsEl.style.cssText = 'position:absolute;top:8px;right:8px;font-size:11px;font-mono;color:#888;z-index:10;';
     container.appendChild(fpsEl);
+
+    // Hover tooltip as a direct-DOM element (NOT React state): updating it on
+    // every hover change avoids re-rendering the whole Map component ~15×/sec
+    // while the cursor sweeps the dense dot cloud — that React churn was the
+    // remaining hover stutter.
+    const tooltipEl = document.createElement('div');
+    tooltipEl.className = 'fixed bottom-6 left-1/2 -translate-x-1/2 rounded-[10px] px-5 py-3 z-20 pointer-events-none backdrop-blur-xl border border-white/[0.08] text-center';
+    tooltipEl.style.background = 'rgba(10, 10, 20, 0.75)';
+    tooltipEl.style.display = 'none';
+    const ttType = document.createElement('div');
+    ttType.className = 'text-[11px] font-semibold uppercase tracking-wide mb-1';
+    const ttTitle = document.createElement('div');
+    ttTitle.className = 'text-sm text-text-primary font-medium';
+    const ttConcepts = document.createElement('div');
+    ttConcepts.className = 'text-[11px] text-text-muted mt-1';
+    tooltipEl.append(ttType, ttTitle, ttConcepts);
+    container.appendChild(tooltipEl);
+    function showTooltip(doc: MapDocument | null) {
+      if (doc) {
+        ttType.textContent = doc.type;
+        ttType.style.color = TYPE_COLORS[doc.type] || TYPE_COLORS.unknown;
+        ttTitle.textContent = extractTitle(doc.source_file);
+        if (doc.concepts.length > 0) {
+          ttConcepts.textContent = doc.concepts.slice(0, 4).join(', ');
+          ttConcepts.style.display = '';
+        } else {
+          ttConcepts.style.display = 'none';
+        }
+        tooltipEl.style.display = '';
+      } else {
+        tooltipEl.style.display = 'none';
+      }
+    }
 
     // Animation loop
     let time = 0;
@@ -742,15 +772,15 @@ export function Map() {
         }
       }
 
-      // Derive hover from the nearest projected node. Push to React + cursor
-      // only on change.
+      // Derive hover from the nearest projected node. Update the DOM tooltip +
+      // cursor only on change — no React state, so no component re-render.
       if (!isDragging.current) {
         const top = nearby.length > 0 ? nearby[0] : null;
         const hoverDoc = top && top.screenDist < HOVER_DIST ? top.doc : null;
         const hoverId = hoverDoc ? hoverDoc.id : null;
         if (hoverId !== lastHoverId) {
           lastHoverId = hoverId;
-          setHoveredDoc(hoverDoc);
+          showTooltip(hoverDoc);
           container!.style.cursor = hoverDoc ? 'pointer' : 'grab';
         }
       }
@@ -967,22 +997,8 @@ export function Map() {
           </div>
         )}
 
-        {hoveredDoc && (
-          <div
-            className="fixed bottom-6 left-1/2 -translate-x-1/2 rounded-[10px] px-5 py-3 z-20 pointer-events-none backdrop-blur-xl border border-white/[0.08] text-center"
-            style={{ background: 'rgba(10, 10, 20, 0.75)' }}
-          >
-            <div className="text-[11px] font-semibold uppercase tracking-wide mb-1" style={{ color: TYPE_COLORS[hoveredDoc.type] }}>
-              {hoveredDoc.type}
-            </div>
-            <div className="text-sm text-text-primary font-medium">{extractTitle(hoveredDoc.source_file)}</div>
-            {hoveredDoc.concepts.length > 0 && (
-              <div className="text-[11px] text-text-muted mt-1">
-                {hoveredDoc.concepts.slice(0, 4).join(', ')}
-              </div>
-            )}
-          </div>
-        )}
+        {/* Hover tooltip is rendered via direct DOM (see showTooltip in the
+            three.js effect) to avoid a React re-render on every hover change. */}
 
         <div
           className="absolute bottom-4 left-4 flex gap-1 rounded-[10px] px-2 py-1.5 text-[11px] text-text-secondary backdrop-blur-xl border border-white/[0.08]"
