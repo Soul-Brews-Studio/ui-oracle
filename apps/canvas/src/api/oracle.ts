@@ -5,6 +5,17 @@ export { apiUrl, hostLabel, activeHost, isDefault, isRemote } from './host';
 export const API_BASE = apiUrl('/api');
 
 const ONE_HOUR = 60 * 60 * 1000;
+
+/**
+ * Host-scope every cache key with API_BASE. Without this, switching `?host=`
+ * (a full page reload, so API_BASE is re-resolved fresh) would still read a
+ * cache entry written by the previous backend — the key describes the query,
+ * not which backend wrote the entry. (Found via multi-instance testing —
+ * reported by Muninn, 2026-07-25.)
+ */
+function hk(key: string): string {
+  return `${API_BASE}::${key}`;
+}
 const ONE_DAY = 24 * ONE_HOUR;
 const TEN_MIN = 10 * 60 * 1000;
 
@@ -71,7 +82,7 @@ export interface SearchResult {
 }
 
 export async function getStats(): Promise<Stats> {
-  return cached('stats', ONE_HOUR, async () => {
+  return cached(hk('stats'), ONE_HOUR, async () => {
     const res = await fetch(`${API_BASE}/stats`);
     if (!res.ok) throw new Error(`stats ${res.status}`);
     return res.json();
@@ -95,7 +106,7 @@ export async function getMap(): Promise<{ documents: MapDocument[]; total: numbe
 export async function getMap3d(model?: string): Promise<{ documents: MapDocument[]; total: number; pca_info?: unknown }> {
   const params = model ? `?model=${encodeURIComponent(model)}` : '';
   const key = `map3d:${model ?? 'default'}`;
-  return cached(key, ONE_DAY, async () => {
+  return cached(hk(key), ONE_DAY, async () => {
     const res = await fetch(`${API_BASE}/map3d${params}`);
     return res.json();
   }, { tag: 'map3d', store: 'idb' });
@@ -107,7 +118,7 @@ export async function getOracles(): Promise<{
   total_projects: number;
   total_identities: number;
 }> {
-  return cached('oracles', ONE_DAY, async () => {
+  return cached(hk('oracles'), ONE_DAY, async () => {
     const res = await fetch(`${API_BASE}/oracles`);
     return res.json();
   }, { tag: 'oracles' });
@@ -123,7 +134,7 @@ export async function search(
   const params = new URLSearchParams({ q: query, type, limit: String(limit), mode });
   if (model) params.set('model', model);
   const qs = params.toString();
-  return cached(`search:${qs}`, TEN_MIN, async () => {
+  return cached(hk(`search:${qs}`), TEN_MIN, async () => {
     const res = await fetch(`${API_BASE}/search?${qs}`);
     return res.json();
   }, { tag: 'search' });
