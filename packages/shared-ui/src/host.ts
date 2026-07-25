@@ -68,6 +68,21 @@ export function clearStoredHost(): void {
   localStorage.removeItem(STORAGE_KEY);
 }
 
+// Manually-disconnected flag — distinct from "which host is stored". Set by
+// clicking Disconnect in HostPicker; cleared by explicitly reconnecting (the
+// gate's Connect action). While set, BackendGate must not probe ANY backend
+// (not even the default) — the whole point is "stop trying until I say so".
+const DISCONNECT_KEY = 'oracle-studio-disconnected';
+
+export function isManuallyDisconnected(): boolean {
+  return typeof window !== 'undefined' && localStorage.getItem(DISCONNECT_KEY) === '1';
+}
+
+export function setManuallyDisconnected(disconnected: boolean): void {
+  if (disconnected) localStorage.setItem(DISCONNECT_KEY, '1');
+  else localStorage.removeItem(DISCONNECT_KEY);
+}
+
 export function getRecentHosts(): string[] {
   try {
     return JSON.parse(localStorage.getItem(RECENT_KEY) || '[]');

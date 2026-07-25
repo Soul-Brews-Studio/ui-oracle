@@ -1,14 +1,18 @@
-import { clearStoredHost, hostLabel, isDefault, setStoredHost } from '../../host';
+import { clearStoredHost, hostLabel, isDefault, setManuallyDisconnected, setStoredHost } from '../../host';
 import { localStore, idbStore } from '../../cache';
 
 /**
- * Pill button showing the current Oracle host. Click opens a prompt to change
- * or clear the stored host; page reloads after change. When a non-default
- * host is active, a labelled "Disconnect" button appears alongside it — one
- * click back to the default localhost:47778, no prompt round-trip, and it
- * fully resets client state (not just the host pointer): the shared-ui cache
- * (menu, etc.) is host-agnostic — a stale entry fetched from the old backend
- * would otherwise survive the switch and get served under the new one.
+ * Pill button showing the current Oracle host, plus a "Disconnect" button.
+ *
+ * HostPicker only ever renders while BackendGate has let the app through
+ * (Disconnect lives INSIDE the gate) — so being visible at all means we are
+ * currently connected, regardless of which host. Disconnect therefore always
+ * shows, not just for a non-default host: it sets the manually-disconnected
+ * flag so BackendGate stops probing ANY backend (not even the default) until
+ * the user explicitly hits Connect in the gate screen — "stay off until I say
+ * so", not an auto-reconnect to whatever's reachable. It also resets the host
+ * pointer to default and clears the shared-ui cache (host-agnostic keys would
+ * otherwise serve stale data from the old backend after a future reconnect).
  */
 export function HostPicker() {
   const onClick = () => {
@@ -17,6 +21,7 @@ export function HostPicker() {
       isDefault ? '' : hostLabel().replace(' (default)', ''),
     );
     if (next === null) return;
+    setManuallyDisconnected(false); // picking a host is an explicit connect intent
     if (next.trim() === '') clearStoredHost();
     else setStoredHost(next.trim());
     window.location.reload();
@@ -25,6 +30,7 @@ export function HostPicker() {
   const onDisconnect = async (e: React.MouseEvent) => {
     e.stopPropagation();
     clearStoredHost();
+    setManuallyDisconnected(true);
     await Promise.allSettled([localStore.clear(), idbStore.clear()]);
     window.location.reload();
   };
@@ -45,15 +51,13 @@ export function HostPicker() {
         />
         <span className="max-w-[220px] truncate">{hostLabel()}</span>
       </button>
-      {!isDefault && (
-        <button
-          onClick={onDisconnect}
-          title="Disconnect — return to default localhost:47778 and clear cached state"
-          className="flex items-center gap-1 px-2 py-0.5 rounded-md border border-border text-text-muted hover:border-red-400/40 hover:bg-red-400/10 hover:text-red-400 transition-all duration-150"
-        >
-          Disconnect
-        </button>
-      )}
+      <button
+        onClick={onDisconnect}
+        title="Disconnect — stop connecting to any backend until you reconnect"
+        className="flex items-center gap-1 px-2 py-0.5 rounded-md border border-border text-text-muted hover:border-red-400/40 hover:bg-red-400/10 hover:text-red-400 transition-all duration-150"
+      >
+        Disconnect
+      </button>
     </div>
   );
 }

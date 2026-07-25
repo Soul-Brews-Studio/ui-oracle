@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { BasePathProvider, useBase, withBase, BuildFooter } from '@ui-oracle/shared-ui';
+import { BasePathProvider, useBase, withBase, BuildFooter, isManuallyDisconnected } from '@ui-oracle/shared-ui';
 import { Header } from './components/Header';
 
 import { Overview } from './pages/Overview';
@@ -89,6 +89,10 @@ function StandaloneHeader() {
 export function StudioRoutes({ header = false }: { header?: boolean }) {
   useEffect(() => {
     installUiErrorCapture(); // app-wide client-error capture for HUGINN (/__debug)
+    // Skip while manually disconnected — BackendGate promises not to probe
+    // any host until the user hits Connect, and this call runs above the
+    // gate (HUGINN's /__debug must stay reachable even when disconnected).
+    if (isManuallyDisconnected()) return;
     getStats().then(stats => {
       if (stats.vault_repo) setVaultRepo(stats.vault_repo);
     }).catch(() => {});

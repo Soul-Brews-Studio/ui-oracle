@@ -1,18 +1,23 @@
 import { useCallback, useEffect, useState } from 'react';
 import { API_BASE } from '../api/oracle';
-import { clearStoredHost, hostLabel, setStoredHost } from '../api/host';
+import { clearStoredHost, hostLabel, isManuallyDisconnected, setManuallyDisconnected, setStoredHost } from '../api/host';
 
 /**
- * 'down'  — nothing answered the connection at all.
- * 'stuck' — something IS listening but never served a healthy response. A
- *           wedged backend holds its port open, so treating that as "not
- *           installed" sends people to reinstall when they need to restart.
+ * 'disconnected' — the user clicked Disconnect. No probe has run (or will
+ *                  run) for this backend until they explicitly hit Connect —
+ *                  this is a deliberate stop, not a connectivity failure, so
+ *                  it must never be confused with 'down'/'stuck' messaging.
+ * 'down'          — nothing answered the connection at all.
+ * 'stuck'         — something IS listening but never served a healthy
+ *                  response. A wedged backend holds its port open, so
+ *                  treating that as "not installed" sends people to reinstall
+ *                  when they need to restart.
  */
-type GateState = 'probing' | 'ok' | 'down' | 'stuck';
+type GateState = 'probing' | 'ok' | 'down' | 'stuck' | 'disconnected';
 
 const PROBE_TIMEOUT_MS = 5000;
 
-async function probeBackend(): Promise<Exclude<GateState, 'probing'>> {
+async function probeBackend(): Promise<Exclude<GateState, 'probing' | 'disconnected'>> {
   const controller = new AbortController();
   let timedOut = false;
   const timer = setTimeout(() => {
@@ -34,9 +39,15 @@ async function probeBackend(): Promise<Exclude<GateState, 'probing'>> {
 }
 
 export function BackendGate({ children }: { children: React.ReactNode }) {
-  const [state, setState] = useState<GateState>('probing');
+  const [state, setState] = useState<GateState>(
+    isManuallyDisconnected() ? 'disconnected' : 'probing',
+  );
 
   const probe = useCallback(async () => {
+    if (isManuallyDisconnected()) {
+      setState('disconnected');
+      return;
+    }
     setState('probing');
     setState(await probeBackend());
   }, []);
@@ -56,7 +67,56 @@ export function BackendGate({ children }: { children: React.ReactNode }) {
     );
   }
 
+  if (state === 'disconnected') {
+    return <DisconnectedLanding onConnect={() => { setManuallyDisconnected(false); probe(); }} />;
+  }
+
   return <UnreachableLanding onRetry={probe} state={state} />;
+}
+
+function DisconnectedLanding({ onConnect }: { onConnect: () => void }) {
+  const handleChangeHost = () => {
+    const current = hostLabel();
+    const next = window.prompt(
+      'Enter a new host (e.g. localhost:47778, http://mba.wg:47778). Leave empty to use default.',
+      current.replace(' (default)', ''),
+    );
+    if (next === null) return;
+    setManuallyDisconnected(false);
+    const trimmed = next.trim();
+    if (trimmed === '') clearStoredHost();
+    else setStoredHost(trimmed);
+    window.location.reload();
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center p-6">
+      <div className="bg-bg-card border border-border rounded-2xl p-10 max-w-[560px] w-full text-center">
+        <h1 className="text-2xl font-semibold text-text-primary mb-3">Disconnected</h1>
+        <p className="text-text-secondary mb-6">
+          You disconnected from the Oracle backend. Nothing will load until you
+          reconnect — this app will not probe any host in the meantime.
+        </p>
+        <p className="text-text-secondary text-xs mb-6">
+          Will reconnect to: <code className="text-accent">{hostLabel()}</code>
+        </p>
+        <div className="flex flex-wrap gap-3 justify-center">
+          <button
+            onClick={onConnect}
+            className="px-4 py-2 rounded-lg bg-accent text-white text-sm font-medium hover:opacity-90"
+          >
+            Connect
+          </button>
+          <button
+            onClick={handleChangeHost}
+            className="px-4 py-2 rounded-lg border border-border text-text-primary text-sm font-medium hover:bg-bg-hover"
+          >
+            Change host
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function UnreachableLanding({

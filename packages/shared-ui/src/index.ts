@@ -51,6 +51,8 @@ export {
   isRemote,
   isStudioHost,
   isVectorHost,
+  isManuallyDisconnected,
+  setManuallyDisconnected,
   setStoredHost,
   wsUrl,
 } from './host';
