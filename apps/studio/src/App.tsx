@@ -18,7 +18,7 @@ import { Playground } from './pages/Playground';
 import { Compare } from './pages/Compare';
 import { CommandPalette } from './components/CommandPalette';
 import { BackendGate } from './components/BackendGate';
-import { Map } from './pages/Map';
+import { Memory } from './pages/Memory';
 import { Schedule } from './pages/Schedule';
 import { Pulse } from './pages/Pulse';
 import { Plugins } from './pages/Plugins';
@@ -120,7 +120,9 @@ function GatedStudio({ header }: { header: boolean }) {
           <Route path="search" element={<RequireAuth><Search /></RequireAuth>} />
           <Route path="playground" element={<RequireAuth><Playground /></RequireAuth>} />
           <Route path="compare" element={<RequireAuth><Compare /></RequireAuth>} />
-          <Route path="map" element={<RequireAuth><Map /></RequireAuth>} />
+          {/* Memory hosts every data-backed view of the corpus (Map / Planets /
+              Map 3D / Graph 3D) behind one switcher; ?view= selects. */}
+          <Route path="map" element={<RequireAuth><Memory /></RequireAuth>} />
           <Route path="graph" element={<GraphRedirect />} />
           <Route path="graph3d" element={<GraphRedirect />} />
           <Route path="handoff" element={<RequireAuth><Handoff /></RequireAuth>} />
