@@ -23,3 +23,8 @@ dist-ssr
 *.sln
 *.sw?
 agents/
+
+# Playwright harness output
+.shots/
+test-results/
+playwright-report/

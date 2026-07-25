@@ -26,7 +26,8 @@
     "deploy": "bun run build && wrangler deploy",
     "prepublishOnly": "bun run build",
     "test": "bunx playwright test",
-    "test:ui": "bunx playwright test --ui"
+    "test:ui": "bunx playwright test --ui",
+    "shot": "bun e2e/shot.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -46,6 +47,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
+    "@playwright/test": "^1.62.0",
     "@tailwindcss/vite": "^4.2.1",
     "@types/node": "^24.10.1",
     "@types/react": "^19.2.5",
