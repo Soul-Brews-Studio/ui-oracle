@@ -65,6 +65,9 @@ function ageScale(createdAt: string | null): number {
   return 0.7;
 }
 
+/** How the document cloud is drawn: sphere instances, or a GPU point cloud. */
+type RenderMode = 'spheres' | 'points';
+
 interface GlobeData {
   key: string;
   model: string;
@@ -87,6 +90,34 @@ export function Map() {
   const [searching, setSearching] = useState(false);
   const [visibleTypes, setVisibleTypes] = useState<Set<string>>(new Set(['principle', 'learning', 'retro']));
   const [selectedProject, setSelectedProject] = useState<string | null>(null);
+
+  // --- Render mode: sphere instances vs point cloud -------------------------
+  // Spheres are InstancedMesh over a 10×10 SphereGeometry — ~80 triangles per
+  // doc, so 35k docs is ~2.8M triangles every frame even though it is a single
+  // draw call. The point cloud draws 1 vertex per doc instead (~80× less GPU
+  // work) and reproduces the same look with a soft round mask in the fragment
+  // shader. Above the threshold we pick points automatically; the user can pin
+  // either mode and that choice wins and persists.
+  const AUTO_POINTS_THRESHOLD = 20000;
+  const [modeOverride, setModeOverride] = useState<RenderMode | null>(() => {
+    const v = localStorage.getItem('map:renderMode');
+    return v === 'points' || v === 'spheres' ? v : null;
+  });
+  const totalDocs = globes.reduce((sum, g) => sum + g.documents.length, 0);
+  const autoMode: RenderMode = totalDocs > AUTO_POINTS_THRESHOLD ? 'points' : 'spheres';
+  const renderMode: RenderMode = modeOverride ?? autoMode;
+  const toggleRenderMode = () => {
+    const next: RenderMode = renderMode === 'points' ? 'spheres' : 'points';
+    // Pinning back to whatever auto would have chosen clears the override, so
+    // the map resumes following the doc count as the corpus grows.
+    if (next === autoMode) {
+      localStorage.removeItem('map:renderMode');
+      setModeOverride(null);
+    } else {
+      localStorage.setItem('map:renderMode', next);
+      setModeOverride(next);
+    }
+  };
 
   const visibleTypesRef = useRef<Set<string>>(new Set(['principle', 'learning', 'retro']));
   const selectedProjectRef = useRef<string | null>(null);
@@ -347,23 +378,129 @@ export function Map() {
       return material;
     }
 
-    // One InstancedMesh per globe (globes are few: 1..4). Each record keeps the
-    // per-instance state the animate loop mutates every frame.
+    // Point-cloud counterpart of makeInstancedDocMaterial. Same inputs (colour,
+    // emissive, alpha, seed) and the same jitter + dock-magnify maths, but one
+    // vertex per doc instead of a sphere, so the GPU rasterises ~80× less. The
+    // round dot is a mask in the fragment shader; brightness feeds the existing
+    // bloom pass exactly like the spheres' emissive did.
+    //
+    // Extra per-point attribute: aScale (baseScale × matched 1.4 × hidden 0) —
+    // the point-cloud stand-in for the instance matrix's scale.
+    const pointsMaterials: THREE.ShaderMaterial[] = [];
+    function makeDocPointsMaterial(): THREE.ShaderMaterial {
+      const material = new THREE.ShaderMaterial({
+        transparent: true,
+        depthWrite: true,
+        uniforms: {
+          uTime: { value: 0 },
+          uMouse: { value: new THREE.Vector2(10, 10) },
+          uAspect: { value: aspect0 },
+          uEmissiveScale: { value: 1.0 },
+          uJitterAmp: { value: prefersReduced ? 0 : 1 },
+          uMagnifyRadius: { value: 0.5 },
+          uMagnifyStrength: { value: 0.6 },
+          uViewportHeight: { value: height },
+        },
+        vertexShader: `
+uniform float uTime;
+uniform vec2 uMouse;
+uniform float uAspect;
+uniform float uEmissiveScale;
+uniform float uJitterAmp;
+uniform float uMagnifyRadius;
+uniform float uMagnifyStrength;
+uniform float uViewportHeight;
+
+attribute vec3 aInstColor;
+attribute float aEmissive;
+attribute float aEmissiveScaled;
+attribute float aAlpha;
+attribute float aSeed;
+attribute float aScale;
+
+varying vec3 vDotColor;
+varying float vDotAlpha;
+varying float vBright;
+
+void main() {
+  // Per-point floating jitter — same hash + amplitudes as the sphere shader.
+  float s1 = fract(sin(aSeed * 12.9898) * 43758.5453);
+  float s2 = fract(sin(aSeed * 78.2330) * 43758.5453);
+  float s3 = fract(sin(aSeed * 37.7190) * 43758.5453);
+  vec3 pos = position + uJitterAmp * vec3(
+    sin(uTime * 0.9 + s1 * 6.2831) * 0.12,
+    sin(uTime * 1.1 + s2 * 6.2831) * 0.12,
+    sin(uTime * 0.7 + s3 * 6.2831) * 0.06);
+
+  vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
+  vec4 clip = projectionMatrix * mvPosition;
+
+  // Dock-magnify: aspect-corrected screen distance from the cursor.
+  vec2 ndc = clip.xy / clip.w;
+  float dxm = (ndc.x - uMouse.x) * uAspect;
+  float dym = ndc.y - uMouse.y;
+  float sdist = sqrt(dxm * dxm + dym * dym);
+  float magnify = sdist < uMagnifyRadius
+    ? 1.0 + uMagnifyStrength * pow(1.0 - sdist / uMagnifyRadius, 2.0)
+    : 1.0;
+
+  vDotColor = aInstColor;
+  vDotAlpha = aAlpha;
+  vBright = aEmissive + aEmissiveScaled * uEmissiveScale + (magnify - 1.0) * 0.6;
+
+  gl_Position = clip;
+  // Match the sphere's world radius (0.05) under perspective: project the
+  // diameter to pixels. aScale == 0 (hidden) yields size 0 → never rasterised.
+  float worldSize = 0.05 * 2.0 * aScale * magnify;
+  float px = worldSize * uViewportHeight * 0.5 * projectionMatrix[1][1] / max(0.0001, -mvPosition.z);
+  gl_PointSize = clamp(px, 0.0, 64.0);
+}`,
+        fragmentShader: `
+varying vec3 vDotColor;
+varying float vDotAlpha;
+varying float vBright;
+
+void main() {
+  // Round, soft-edged dot.
+  float d = length(gl_PointCoord - vec2(0.5));
+  if (d > 0.5) discard;
+  float edge = smoothstep(0.5, 0.34, d);
+  vec3 col = vDotColor * (0.35 + vBright);
+  gl_FragColor = vec4(col, vDotAlpha * edge);
+  #include <tonemapping_fragment>
+  #include <colorspace_fragment>
+}`,
+      });
+      docUniforms.push(material.uniforms as unknown as DocUniforms);
+      pointsMaterials.push(material);
+      return material;
+    }
+
+    // One object per globe (globes are few: 1..4) — an InstancedMesh in
+    // 'spheres' mode, a Points cloud in 'points' mode. Exactly one of
+    // mesh/points is set; everything else in the record is shared, so
+    // rebuildInstances() and updateHoverAndLabels() are mode-agnostic apart
+    // from how a doc's scale is written (instance matrix vs aScale attribute).
     interface GlobeInstanced {
-      mesh: THREE.InstancedMesh;
+      mesh: THREE.InstancedMesh | null;
+      points: THREE.Points | null;
+      /** Whichever of mesh/points is live — for raycasting and disposal. */
+      object: THREE.Object3D;
+      /** Only in 'points' mode: per-point size (baseScale × matched × hidden). */
+      scaleArr: Float32Array | null;
+      scaleAttr: THREE.BufferAttribute | null;
       docs: MapDocument[];
       basePositions: THREE.Vector3[];
       baseScales: Float32Array;
       emissiveArr: Float32Array;
       emissiveScaledArr: Float32Array;
       alphaArr: Float32Array;
-      emissiveAttr: THREE.InstancedBufferAttribute;
-      emissiveScaledAttr: THREE.InstancedBufferAttribute;
-      alphaAttr: THREE.InstancedBufferAttribute;
+      emissiveAttr: THREE.BufferAttribute;
+      emissiveScaledAttr: THREE.BufferAttribute;
+      alphaAttr: THREE.BufferAttribute;
       center: THREE.Vector3;
     }
     const globeInstanced: GlobeInstanced[] = [];
-    const instancedMeshes: THREE.InstancedMesh[] = [];
     const nodes: { basePos: THREE.Vector3; doc: MapDocument }[] = [];
     // Monotonic counter across every globe so each instance gets a unique seed.
     let globalSeed = 0;
@@ -400,16 +537,20 @@ export function Map() {
         });
       }
 
-      // Nodes for this globe — one InstancedMesh, all docs as instances.
+      // Nodes for this globe — one InstancedMesh (spheres) or one Points cloud.
       const docs = globe.documents;
       const count = docs.length;
       const cap = Math.max(1, count);
-      const geometry = nodeGeometry.clone();
-      const material = makeInstancedDocMaterial();
-      const mesh = new THREE.InstancedMesh(geometry, material, cap);
-      mesh.count = count;
-      mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-      mesh.frustumCulled = false;
+      const usePoints = renderMode === 'points';
+      const geometry = usePoints ? new THREE.BufferGeometry() : nodeGeometry.clone();
+      let mesh: THREE.InstancedMesh | null = null;
+      if (!usePoints) {
+        const material = makeInstancedDocMaterial();
+        mesh = new THREE.InstancedMesh(geometry, material, cap);
+        mesh.count = count;
+        mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+        mesh.frustumCulled = false;
+      }
 
       const colorArr = new Float32Array(cap * 3);
       const emissiveArr = new Float32Array(cap);
@@ -418,6 +559,9 @@ export function Map() {
       const seedArr = new Float32Array(cap);
       const baseScales = new Float32Array(cap);
       const basePositions: THREE.Vector3[] = [];
+      // Points mode carries position + size as plain attributes (no matrices).
+      const posArr = usePoints ? new Float32Array(cap * 3) : null;
+      const scaleArr = usePoints ? new Float32Array(cap) : null;
       const col = new THREE.Color();
 
       for (let i = 0; i < count; i++) {
@@ -442,29 +586,68 @@ export function Map() {
         );
         basePositions.push(basePos);
         nodes.push({ basePos, doc });
-        instDummy.position.copy(basePos);
-        instDummy.scale.setScalar(baseScales[i]);
-        instDummy.rotation.set(0, 0, 0);
-        instDummy.updateMatrix();
-        mesh.setMatrixAt(i, instDummy.matrix);
+        if (posArr && scaleArr) {
+          posArr[i * 3] = basePos.x;
+          posArr[i * 3 + 1] = basePos.y;
+          posArr[i * 3 + 2] = basePos.z;
+          scaleArr[i] = baseScales[i];
+        } else if (mesh) {
+          instDummy.position.copy(basePos);
+          instDummy.scale.setScalar(baseScales[i]);
+          instDummy.rotation.set(0, 0, 0);
+          instDummy.updateMatrix();
+          mesh.setMatrixAt(i, instDummy.matrix);
+        }
       }
 
-      const emissiveAttr = new THREE.InstancedBufferAttribute(emissiveArr, 1);
-      const emissiveScaledAttr = new THREE.InstancedBufferAttribute(emissiveScaledArr, 1);
-      const alphaAttr = new THREE.InstancedBufferAttribute(alphaArr, 1);
-      emissiveAttr.setUsage(THREE.DynamicDrawUsage);
-      emissiveScaledAttr.setUsage(THREE.DynamicDrawUsage);
-      alphaAttr.setUsage(THREE.DynamicDrawUsage);
-      geometry.setAttribute('aInstColor', new THREE.InstancedBufferAttribute(colorArr, 3));
+      // Points mode uses plain BufferAttributes (one value per vertex); sphere
+      // mode uses InstancedBufferAttributes (one value per instance).
+      const mk1 = (arr: Float32Array): THREE.BufferAttribute => {
+        const a = usePoints
+          ? new THREE.BufferAttribute(arr, 1)
+          : new THREE.InstancedBufferAttribute(arr, 1);
+        a.setUsage(THREE.DynamicDrawUsage);
+        return a;
+      };
+      const emissiveAttr = mk1(emissiveArr);
+      const emissiveScaledAttr = mk1(emissiveScaledArr);
+      const alphaAttr = mk1(alphaArr);
+      geometry.setAttribute(
+        'aInstColor',
+        usePoints
+          ? new THREE.BufferAttribute(colorArr, 3)
+          : new THREE.InstancedBufferAttribute(colorArr, 3),
+      );
       geometry.setAttribute('aEmissive', emissiveAttr);
       geometry.setAttribute('aEmissiveScaled', emissiveScaledAttr);
       geometry.setAttribute('aAlpha', alphaAttr);
-      geometry.setAttribute('aSeed', new THREE.InstancedBufferAttribute(seedArr, 1));
-      mesh.instanceMatrix.needsUpdate = true;
-      scene.add(mesh);
+      geometry.setAttribute(
+        'aSeed',
+        usePoints
+          ? new THREE.BufferAttribute(seedArr, 1)
+          : new THREE.InstancedBufferAttribute(seedArr, 1),
+      );
 
-      globeInstanced.push({ mesh, docs, basePositions, baseScales, emissiveArr, emissiveScaledArr, alphaArr, emissiveAttr, emissiveScaledAttr, alphaAttr, center: globe.center });
-      instancedMeshes.push(mesh);
+      let points: THREE.Points | null = null;
+      let scaleAttr: THREE.BufferAttribute | null = null;
+      if (usePoints && posArr && scaleArr) {
+        geometry.setAttribute('position', new THREE.BufferAttribute(posArr, 3));
+        scaleAttr = mk1(scaleArr);
+        geometry.setAttribute('aScale', scaleAttr);
+        geometry.setDrawRange(0, count);
+        points = new THREE.Points(geometry, makeDocPointsMaterial());
+        points.frustumCulled = false;
+        scene.add(points);
+      } else if (mesh) {
+        mesh.instanceMatrix.needsUpdate = true;
+        scene.add(mesh);
+      }
+
+      globeInstanced.push({
+        mesh, points, object: (points ?? mesh)!, scaleArr, scaleAttr,
+        docs, basePositions, baseScales, emissiveArr, emissiveScaledArr, alphaArr,
+        emissiveAttr, emissiveScaledAttr, alphaAttr, center: globe.center,
+      });
     });
     nodesRef.current = nodes;
 
@@ -488,12 +671,19 @@ export function Map() {
         mouse.x = ((e.clientX - rect.left) / width) * 2 - 1;
         mouse.y = -((e.clientY - rect.top) / height) * 2 + 1;
         raycaster.setFromCamera(mouse, camera);
-        const intersects = raycaster.intersectObjects(instancedMeshes);
+        // Points hit-testing needs a world-space radius; spheres have real
+        // geometry. In points mode a Points intersection reports `index`, an
+        // InstancedMesh reports `instanceId` — both index into rec.docs.
+        raycaster.params.Points.threshold = 0.15;
+        const intersects = raycaster.intersectObjects(
+          globeInstanced.map(r => r.object),
+        );
         if (intersects.length > 0) {
           const hit = intersects[0];
-          const rec = globeInstanced.find(r => r.mesh === hit.object);
-          if (rec && hit.instanceId != null) {
-            const doc = rec.docs[hit.instanceId];
+          const rec = globeInstanced.find(r => r.object === hit.object);
+          const idx = hit.instanceId ?? hit.index;
+          if (rec && idx != null) {
+            const doc = rec.docs[idx];
             if (doc) navigate(`/doc/${encodeURIComponent(doc.id)}`);
           }
         }
@@ -544,6 +734,8 @@ export function Map() {
       camera.updateProjectionMatrix();
       renderer.setSize(w, h);
       composer.setSize(w, h);
+      // Point sizes are computed in pixels from the viewport height.
+      for (const m of pointsMaterials) m.uniforms.uViewportHeight.value = h;
     }
     window.addEventListener('resize', onResize);
 
@@ -637,18 +829,25 @@ export function Map() {
       const projFilter = selectedProjectRef.current;
       for (let gi = 0; gi < globeInstanced.length; gi++) {
         const rec = globeInstanced[gi];
-        const { mesh, docs, basePositions, baseScales, emissiveArr, emissiveScaledArr, alphaArr } = rec;
+        const { mesh, scaleArr, docs, basePositions, baseScales, emissiveArr, emissiveScaledArr, alphaArr } = rec;
         const count = docs.length;
-        for (let i = 0; i < count; i++) {
-          const doc = docs[i];
-          const basePos = basePositions[i];
-          const isHidden = !visTypes.has(doc.type);
-          if (isHidden) {
-            instDummy.position.copy(basePos);
-            instDummy.scale.setScalar(0);
+        // Write a doc's size: point-cloud size attribute, or instance matrix.
+        const setScale = (i: number, scale: number) => {
+          if (scaleArr) {
+            scaleArr[i] = scale;
+          } else if (mesh) {
+            instDummy.position.copy(basePositions[i]);
+            instDummy.scale.setScalar(scale);
             instDummy.rotation.set(0, 0, 0);
             instDummy.updateMatrix();
             mesh.setMatrixAt(i, instDummy.matrix);
+          }
+        };
+        for (let i = 0; i < count; i++) {
+          const doc = docs[i];
+          const isHidden = !visTypes.has(doc.type);
+          if (isHidden) {
+            setScale(i, 0);
             emissiveArr[i] = 0;
             emissiveScaledArr[i] = 0;
             alphaArr[i] = 0;
@@ -660,11 +859,7 @@ export function Map() {
 
           let scale = baseScales[i];
           if (isMatched) scale *= 1.4;
-          instDummy.position.copy(basePos);
-          instDummy.scale.setScalar(scale);
-          instDummy.rotation.set(0, 0, 0);
-          instDummy.updateMatrix();
-          mesh.setMatrixAt(i, instDummy.matrix);
+          setScale(i, scale);
 
           // Emissive is split so the shader can apply the per-frame zoom factor
           // (uEmissiveScale) without any CPU work:
@@ -680,7 +875,8 @@ export function Map() {
           emissiveScaledArr[i] = scaled;
           alphaArr[i] = isFaded ? 0.05 : 1.0;
         }
-        mesh.instanceMatrix.needsUpdate = true;
+        if (mesh) mesh.instanceMatrix.needsUpdate = true;
+        if (rec.scaleAttr) rec.scaleAttr.needsUpdate = true;
         rec.emissiveAttr.needsUpdate = true;
         rec.emissiveScaledAttr.needsUpdate = true;
         rec.alphaAttr.needsUpdate = true;
@@ -888,10 +1084,13 @@ export function Map() {
       window.removeEventListener('resize', onResize);
 
       globeInstanced.forEach((rec) => {
-        scene.remove(rec.mesh);
-        rec.mesh.geometry.dispose();
-        (rec.mesh.material as THREE.Material).dispose();
-        rec.mesh.dispose();
+        const obj = rec.object;
+        scene.remove(obj);
+        (obj as THREE.Mesh | THREE.Points).geometry?.dispose();
+        const mat = (obj as THREE.Mesh | THREE.Points).material;
+        if (Array.isArray(mat)) mat.forEach(m => m.dispose());
+        else mat?.dispose();
+        rec.mesh?.dispose();
       });
       nodeGeometry.dispose();
       // Dispose globe geometries
@@ -906,7 +1105,10 @@ export function Map() {
       }
       renderer.dispose();
     };
-  }, [globes, navigate]);
+    // renderMode is a dependency: switching sphere <-> point cloud swaps the
+    // scene objects and their materials, so the whole scene is rebuilt. That is
+    // fine — mode changes are user-initiated and rare.
+  }, [globes, navigate, renderMode]);
 
   // Search
   async function handleSearch(e: React.FormEvent) {
@@ -933,8 +1135,7 @@ export function Map() {
     }
   }
 
-  // Total documents across all globes
-  const totalDocs = globes.reduce((sum, g) => sum + g.documents.length, 0);
+  // (totalDocs is computed above — it also drives the render-mode auto-switch.)
 
   // Type counts across all globes
   const typeCounts = globes.reduce((acc, g) => {
@@ -1064,6 +1265,20 @@ export function Map() {
             style={{ background: 'rgba(10, 10, 20, 0.7)' }}
             title="Center on visible dots"
           >C</button>
+          <button
+            onClick={toggleRenderMode}
+            className="w-9 h-9 rounded-[10px] text-text-primary text-sm font-medium cursor-pointer flex items-center justify-center backdrop-blur-xl border border-white/[0.08] transition-all duration-200 hover:border-accent hover:text-accent"
+            style={{
+              background: 'rgba(10, 10, 20, 0.7)',
+              ...(modeOverride ? { borderColor: 'rgba(96, 165, 250, 0.5)' } : {}),
+            }}
+            title={
+              `Render: ${renderMode === 'points' ? 'point cloud' : 'spheres'}` +
+              ` — ${modeOverride ? 'pinned' : `auto (${totalDocs.toLocaleString()} docs)`}.` +
+              ` Click to switch to ${renderMode === 'points' ? 'spheres' : 'point cloud'}.` +
+              ` Point cloud draws 1 vertex per doc instead of a sphere — much faster on large maps.`
+            }
+          >{renderMode === 'points' ? '·' : '●'}</button>
         </div>
       </div>
 
