@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { PageShell, PageHeader, PillRow, pillClass, EmptyState, AppLink as Link } from '@ui-oracle/shared-ui';
+import { PageShell, PageHeader, Segmented, EmptyState, AppLink as Link } from '@ui-oracle/shared-ui';
 import { getDashboardSummary, getDashboardActivity, getDashboardGrowth } from '../api/oracle';
 import type { DashboardSummary, DashboardActivity, DashboardGrowth } from '../api/oracle';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts';
@@ -96,20 +96,13 @@ export function Activity() {
       <PageHeader title="Activity" subtitle="Search logs and learning history" />
 
       {/* Period Selector */}
-      <PillRow label="Period" className="mb-6">
-        {PERIODS.map(p => (
-          <button
-            key={p}
-            type="button"
-            onClick={() => setPeriod(p)}
-            role="tab"
-            aria-selected={period === p}
-            className={pillClass(period === p)}
-          >
-            {p === 'week' ? '7 days' : p === 'month' ? '30 days' : '90 days'}
-          </button>
-        ))}
-      </PillRow>
+      <Segmented
+        className="mb-6"
+        label="Period"
+        value={period}
+        onChange={(v) => setPeriod(v as typeof period)}
+        items={PERIODS.map((p) => ({ key: p, label: p === 'week' ? '7 days' : p === 'month' ? '30 days' : '90 days' }))}
+      />
 
       {/* Summary Cards - clickable to switch tabs */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">

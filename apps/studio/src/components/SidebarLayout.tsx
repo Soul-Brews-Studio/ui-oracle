@@ -1,5 +1,5 @@
 import { Children, isValidElement } from 'react';
-import { AppLink as Link, PageHeader, PageShell, PillRow, pillClass } from '@ui-oracle/shared-ui';
+import { PageHeader, PageShell, Segmented } from '@ui-oracle/shared-ui';
 
 const DEFAULT_TYPES = [
   { key: 'all', label: 'All' },
@@ -52,30 +52,15 @@ export function SidebarLayout({
   return (
     <PageShell width="reading">
       {header}
-      {filters.length > 0 && <PillRow className="mb-6" label="Filters">
-        {/* Section pages (Traces, Evolution, ...) are the PageHeader's section tabs now (sections.ts);
-            this row keeps only the filters. `navItems` is accepted for old callers and ignored. */}
-        {filters.length > 0 && filters.map(t => (
-          onTypeChange ? (
-            <button
-              key={t.key}
-              type="button"
-              onClick={() => onTypeChange(t.key)}
-              className={pillClass(activeType === t.key)}
-            >
-              {t.label}
-            </button>
-          ) : (
-            <Link
-              key={t.key}
-              to={t.key === 'all' ? linkBase : `${linkBase}?type=${t.key}`}
-              className={pillClass(activeType === t.key)}
-            >
-              {t.label}
-            </Link>
-          )
-        ))}
-      </PillRow>}
+      {filters.length > 0 && (
+        <Segmented
+          className="mb-6"
+          label="Filter"
+          value={activeType}
+          onChange={onTypeChange}
+          items={filters.map((t) => ({ key: t.key, label: t.label, ...(onTypeChange ? {} : { href: t.key === 'all' ? linkBase : `${linkBase}?type=${t.key}` }) }))}
+        />
+      )}
 
       <div className="min-w-0">
         {header ? rest : children}

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { PageShell, PageHeader, PillRow, pillClass } from '@ui-oracle/shared-ui';
+import { PageShell, PageHeader, Segmented } from '@ui-oracle/shared-ui';
 import { Spinner } from '../components/ui/Spinner';
 import { API_BASE } from '../api/oracle';
 
@@ -128,19 +128,13 @@ export function Forum() {
           </button>
         }
       />
-      <PillRow label="Thread status" className="mb-6">
-          {FILTERS.map(f => (
-            <button
-              key={f.label}
-              role="tab"
-              aria-selected={statusFilter === f.value}
-              onClick={() => setSearchParams(f.value ? { status: f.value } : {})}
-              className={pillClass(statusFilter === f.value)}
-            >
-              {f.label}
-            </button>
-          ))}
-        </PillRow>
+      <Segmented
+        className="mb-6"
+        label="Thread status"
+        value={statusFilter ?? ''}
+        onChange={(v) => setSearchParams(v ? { status: v } : {})}
+        items={FILTERS.map((f) => ({ key: f.value ?? '', label: f.label }))}
+      />
       <div className="flex gap-6 max-md:flex-col max-md:gap-0">
         {/* Sidebar — hidden on mobile when thread is selected */}
       <div className={`w-[220px] shrink-0 flex flex-col max-md:w-full ${selected ? 'max-md:hidden' : ''}`}>

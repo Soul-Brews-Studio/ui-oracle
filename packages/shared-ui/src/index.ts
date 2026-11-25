@@ -32,6 +32,8 @@ export type { SubNavItem } from './components/SubNav';
 export { PageShell } from './components/PageShell';
 export { PageHeader } from './components/PageHeader';
 export { PillRow, pillClass } from './components/Pills';
+export { Segmented } from './components/Segmented';
+export type { SegmentedItem } from './components/Segmented';
 export { EmptyState } from './components/EmptyState';
 export { SectionLinks, SectionTabs } from './components/SectionNav';
 export { SECTIONS, sectionFor, tabMatches } from './sections';
