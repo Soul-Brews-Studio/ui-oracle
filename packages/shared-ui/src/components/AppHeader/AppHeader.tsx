@@ -205,13 +205,16 @@ export function AppHeader({
         }}
       />
       <div className="flex justify-between items-center gap-4 px-5 md:px-6 py-3 max-w-[1400px] mx-auto">
+        <div className="flex min-w-0 items-center gap-3">
         <Brand label={brandLabel}>
-          <VersionChip backendVersion={backendVersion} />
-        </Brand>
+            <VersionChip backendVersion={backendVersion} />
+          </Brand>
+          {/* The space picker sits with the brand: it decides what every page shows (Nat 2026-11-25). */}
+          {sections && <span className="hidden sm:block"><SpaceSwitcher /></span>}
+        </div>
 
         {/* The full group needs ~990px (brand + space picker + host picker + chip): from lg up. */}
         <div className="hidden lg:flex items-center gap-2 text-xs font-mono shrink-0">
-          {sections && <SpaceSwitcher />}
           <HostPicker />
           <BackendChip ping={ping} />
           {topRowExtras}
@@ -258,7 +261,7 @@ export function AppHeader({
       </nav>
       {menuOpen && (
         <div className="lg:hidden flex flex-wrap items-center gap-2 px-5 md:px-6 pb-3 text-xs font-mono">
-          {sections && <SpaceSwitcher />}
+          {sections && <span className="sm:hidden"><SpaceSwitcher /></span>}
           <HostPicker />
           {topRowExtras}
         </div>

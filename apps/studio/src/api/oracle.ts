@@ -127,8 +127,10 @@ export async function list(type: string = 'all', limit: number = 20, offset: num
 
 // Get stats
 export async function getStats(): Promise<Stats> {
-  return cached(hk('stats'), ONE_HOUR, async () => {
-    const res = await fetch(`${API_BASE}/stats`);
+  // ?space= scopes the document counts to the picked space (#3110).
+  const space = getSpace() !== 'all' ? `?space=${encodeURIComponent(getSpace())}` : '';
+  return cached(hk(`stats${space}`), ONE_HOUR, async () => {
+    const res = await fetch(`${API_BASE}/stats${space}`);
     if (!res.ok) {
       throw new Error(`Server error: ${res.status}`);
     }

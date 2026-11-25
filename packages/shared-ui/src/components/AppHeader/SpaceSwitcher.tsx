@@ -59,7 +59,7 @@ export function SpaceSwitcher() {
         <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true" className={`shrink-0 text-text-secondary transition-transform duration-150 ${open ? 'rotate-180' : ''}`}><path d="M2 3.5 5 6.5 8 3.5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
       </button>
       {open && (
-        <ul role="listbox" aria-label="Spaces" className="absolute right-0 top-[calc(100%+6px)] z-[60] min-w-[260px] overflow-hidden rounded-lg border border-border bg-bg-card p-1 shadow-[0_12px_32px_rgba(0,0,0,0.45)]">
+        <ul role="listbox" aria-label="Spaces" className="absolute left-0 top-[calc(100%+6px)] z-[60] min-w-[260px] overflow-hidden rounded-lg border border-border bg-bg-card p-1 shadow-[0_12px_32px_rgba(0,0,0,0.45)]">
           {options.map((o, i) => {
             const selected = o.id === current.id;
             return (
