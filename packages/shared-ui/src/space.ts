@@ -26,3 +26,35 @@ export function spaceParam(): string {
   const s = getSpace();
   return s === 'all' ? '' : `&space=${encodeURIComponent(s)}`;
 }
+
+/**
+ * Tenant (#3110): one arra holding several oracles' memories (neo, nexus, mother, pulse...).
+ * The chosen tenant rides on every API request as X-Oracle-Tenant; picking a space clears it.
+ */
+const TENANT_KEY = 'arra-tenant';
+
+export function getTenant(): string {
+  try { return localStorage.getItem(TENANT_KEY) || ''; } catch { return ''; }
+}
+
+export function setTenant(tenant: string): void {
+  try { tenant ? localStorage.setItem(TENANT_KEY, tenant) : localStorage.removeItem(TENANT_KEY); } catch { /* private mode */ }
+}
+
+/** Wrap fetch once so every request to an /api path carries the tenant header (pages need no change). */
+export function installTenantFetch(): void {
+  if (typeof window === 'undefined' || (window as { __arraTenantFetch?: boolean }).__arraTenantFetch) return;
+  (window as { __arraTenantFetch?: boolean }).__arraTenantFetch = true;
+  const original = window.fetch.bind(window);
+  const wrapped = (input: RequestInfo | URL, init?: RequestInit) => {
+    const tenant = getTenant();
+    const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+    if (!tenant || !/\/api\//.test(url) || /\/api\/(v1\/)?(tenants|arra\/spaces)/.test(url)) return original(input, init);
+    const headers = new Headers(init?.headers ?? (input instanceof Request ? input.headers : undefined));
+    headers.set('X-Oracle-Tenant', tenant);
+    return original(input, { ...init, headers });
+  };
+  window.fetch = Object.assign(wrapped, original) as typeof fetch;
+}
+
+installTenantFetch();

@@ -37,7 +37,7 @@ export type { SegmentedItem } from './components/Segmented';
 export { EmptyState } from './components/EmptyState';
 export { SectionLinks, SectionTabs } from './components/SectionNav';
 export { SECTIONS, sectionFor, tabMatches } from './sections';
-export { getSpace, setSpace, onSpaceChange, spaceParam } from './space';
+export { getSpace, setSpace, onSpaceChange, spaceParam, getTenant, setTenant, installTenantFetch } from './space';
 export type { Section, SectionTab } from './sections';
 export { BuildFooter } from './components/BuildFooter';
 
