@@ -23,12 +23,6 @@ body {
   color: var(--color-text-primary);
   min-height: 100vh;
   line-height: 1.6;
-  background-image:
-    radial-gradient(at 15% 10%, rgba(96, 165, 250, 0.10) 0px, transparent 55%),
-    radial-gradient(at 85% 20%, rgba(167, 139, 250, 0.10) 0px, transparent 55%),
-    radial-gradient(at 50% 90%, rgba(74, 222, 128, 0.08) 0px, transparent 60%),
-    linear-gradient(180deg, #07070c 0%, #0a0a10 100%);
-  background-attachment: fixed;
 }
 
 #root {

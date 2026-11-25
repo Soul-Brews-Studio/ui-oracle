@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { PageShell, PageHeader } from '@ui-oracle/shared-ui';
 import { API_BASE } from '../api/oracle';
 import { cacheBus } from '../lib/cache';
 import {
@@ -179,20 +180,16 @@ export function MenuEditor() {
   }
 
   return (
-    <div className="max-w-[1200px] mx-auto px-6 py-8">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold">Menu Editor</h1>
-          <p className="text-sm text-text-secondary mt-1">
-            Tree view — drag ⋮⋮ to reorder within siblings. Click <span className="text-accent">edit</span> to change parent, host, or group. {items.length} items.
-          </p>
-        </div>
-        <button onClick={addCustom} className="px-4 py-2 rounded-lg bg-accent/20 hover:bg-accent/30 text-accent border border-accent/40 text-sm font-medium">+ Add Custom Item</button>
-      </div>
+    <PageShell width="wide">
+      <PageHeader
+        title="Menu Editor"
+        subtitle={<>Tree view — drag ⋮⋮ to reorder within siblings. Click <span className="text-accent">edit</span> to change parent, host, or group. {items.length} items.</>}
+        actions={<button onClick={addCustom} className="px-4 py-2 rounded-lg bg-accent/20 hover:bg-accent/30 text-accent border border-accent/40 text-sm font-medium">+ Add Custom Item</button>}
+      />
 
       <GistSourceConfig onChanged={load} showToast={showToast} />
 
-      {loading && <div className="text-text-secondary">Loading…</div>}
+      {loading && <div className="text-sm text-text-secondary">Loading…</div>}
       {error && <div className="text-red-400">Error: {error}</div>}
 
       {!loading && !error && (
@@ -211,6 +208,6 @@ export function MenuEditor() {
       )}
 
       {toast && <div className="fixed bottom-6 right-6 px-4 py-2 rounded-lg bg-bg-elevated border border-accent/40 shadow-lg text-sm">{toast}</div>}
-    </div>
+    </PageShell>
   );
 }

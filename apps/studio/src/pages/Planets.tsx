@@ -41,7 +41,7 @@ export function Planets() {
   if (data.documents.length === 0) return <PlanetsEmpty />;
 
   return (
-    <div className="flex h-[calc(100vh-64px)] overflow-hidden bg-black">
+    <div className="flex h-[calc(100dvh-var(--app-header-h,100px))] overflow-hidden bg-black">
       <div className="flex-1 relative overflow-hidden">
         <PlanetsCanvas
           documents={filteredDocs}

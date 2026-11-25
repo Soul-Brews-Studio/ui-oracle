@@ -40,7 +40,7 @@ export function OntologyView({ api = defaultApi, initial = null }: { api?: Graph
       </div>
       <div className="grid grid-cols-[minmax(0,1fr)] gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
         {schema ? <GraphCanvas nodes={visible.nodes} edges={visible.edges} selected={selected} onSelect={setSelected} edgeLabels size={900} spread={showValues ? 2.2 : 3} />
-          : <div className="flex h-[620px] items-center justify-center rounded-2xl bg-field text-sm text-text-muted">Loading…</div>}
+          : <div className="flex h-[360px] sm:h-[620px] items-center justify-center rounded-xl bg-field text-sm text-text-muted">Loading…</div>}
         <aside data-testid="ontology-detail" className="space-y-3 rounded-lg border border-border bg-field p-4 text-sm">
           {!concept && <p className="text-text-muted">{doc?.description ?? ''}</p>}
           {concept && (

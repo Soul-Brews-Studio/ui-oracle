@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import * as THREE from 'three';
+import { PageShell, PageHeader, PillRow, pillClass } from '@ui-oracle/shared-ui';
 
 const PLUGINS = ['cube', 'galaxy', 'torus', 'graph3d', 'solar', 'wave', 'map3d'] as const;
 type PluginName = typeof PLUGINS[number];
@@ -24,6 +25,7 @@ export function Canvas() {
   const wrapRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [label, setLabel] = useState('');
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -54,6 +56,8 @@ export function Canvas() {
     const ro = new ResizeObserver(setSize);
     ro.observe(wrap);
 
+    setLabel('');
+    setLoadError(null);
     let instance: PluginInstance = {};
     let raf = 0;
     let disposed = false;
@@ -65,7 +69,7 @@ export function Canvas() {
         setLabel(`plugin: ${mod.default.name}`);
       } catch (err) {
         console.error('plugin load failed:', err);
-        setLabel(`error loading '${pluginName}'`);
+        setLoadError(`Could not load plugin '${pluginName}'`);
       }
       const tick = () => {
         if (disposed) return;
@@ -86,36 +90,45 @@ export function Canvas() {
   }, [pluginName]);
 
   return (
-    <div className="max-w-5xl mx-auto px-6 py-8">
-      <h1 className="text-3xl font-bold mb-2">Canvas</h1>
-      <p className="text-text-muted mb-4 text-sm">
-        Three.js host for visual plugins. Swap plugin with{' '}
-        <code className="text-accent">?plugin=&lt;name&gt;</code>. Each plugin is an ESM module that exports <code className="text-accent">mount()</code>.
-      </p>
+    <PageShell width="wide">
+      <PageHeader
+        title="Canvas"
+        subtitle={
+          <>
+            Three.js host for visual plugins. Swap plugin with{' '}
+            <code className="text-accent">?plugin=&lt;name&gt;</code>. Each plugin is an ESM module that exports <code className="text-accent">mount()</code>.
+          </>
+        }
+      />
 
-      <div className="flex gap-2 mb-4 text-sm flex-wrap">
-        {PLUGINS.map((name) => (
-          <button
-            key={name}
-            onClick={() => setParams({ plugin: name })}
-            className={`px-3 py-1 rounded transition-colors ${
-              name === pluginName
-                ? 'bg-accent/20 text-accent border border-accent/40'
-                : 'bg-bg-card hover:bg-bg-card/70 text-text-secondary'
-            }`}
-          >
-            {name}
-          </button>
-        ))}
-        <span className="ml-auto text-text-muted self-center">{label}</span>
+      <div className="flex items-center gap-3 mb-4">
+        <PillRow label="Plugin" className="min-w-0 flex-1">
+          {PLUGINS.map((name) => (
+            <button
+              key={name}
+              role="tab"
+              aria-selected={name === pluginName}
+              onClick={() => setParams({ plugin: name })}
+              className={pillClass(name === pluginName)}
+            >
+              {name}
+            </button>
+          ))}
+        </PillRow>
+        <span className="shrink-0 text-sm text-text-secondary">{label}</span>
       </div>
 
       <div
         ref={wrapRef}
-        className="w-full h-[70vh] bg-black rounded-lg overflow-hidden"
+        className="relative w-full h-[70vh] bg-black rounded-xl overflow-hidden"
       >
         <canvas ref={canvasRef} className="w-full h-full block" />
+        {loadError && (
+          <div className="absolute inset-0 flex items-center justify-center p-6 text-center text-sm text-text-secondary">
+            {loadError}
+          </div>
+        )}
       </div>
-    </div>
+    </PageShell>
   );
 }

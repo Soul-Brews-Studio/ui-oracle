@@ -5,10 +5,12 @@
  */
 
 import { useCallback, useEffect, useState } from 'react';
+import { EmptyState } from '@ui-oracle/shared-ui';
 import type { HubApi, PublicHub } from './api';
 import { ago, maskIp, shortSha } from './format';
 import { topologyApi as defaultTopologyApi, type Topology, type TopologyApi } from './topology-api';
 import { TopologyCanvas } from './TopologyCanvas';
+import { TopologyStack } from './TopologyStack';
 import { TopologyLegend } from './TopologyLegend';
 import { statusLine } from './topology-words';
 import { Card, danger, ErrorLine, ghost, input, Stat } from './ui';
@@ -52,6 +54,8 @@ export function TopologyView({ api, owner, publicHub, showIps, topoApi = default
     finally { setBusy(false); }
   }
 
+  const pick = (id: string) => { setPicked(id === picked ? null : id); setError(null); };
+
   const toolbar = (
     <div className="flex flex-wrap items-center gap-3 text-sm text-text-muted">
       <span data-testid="updated">{owner ? (t ? `updated ${ago(t.at)}` : 'loading…') : 'public card'}</span>
@@ -64,12 +68,12 @@ export function TopologyView({ api, owner, publicHub, showIps, topoApi = default
     return (
       <Card title="Topology (public card)" right={toolbar}>
         {pub ? (
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <Stat label="hub" value={`hub:${pub.hub}`} />
             <Stat label="vault commit" value={shortSha(pub.sha)} />
             <Stat label="active nodes" value={pub.nodes} />
           </div>
-        ) : <p className="text-sm text-text-muted">The hub card is not reachable from here.</p>}
+        ) : <EmptyState title="The hub card is not reachable from here." />}
         <p data-testid="visitor-note" className="mt-4 text-xs text-text-muted">
           You are on another machine, so you see the public card only. Machine details, refusals, the Ossie status and revoke are shown on the hub machine itself.
         </p>
@@ -81,8 +85,10 @@ export function TopologyView({ api, owner, publicHub, showIps, topoApi = default
   return (
     <div className="min-w-0 space-y-4">
       <Card title="Topology" right={toolbar}>
-        {t ? <div className="overflow-x-auto"><div className="min-w-[880px]"><TopologyCanvas t={t} selected={picked} onPick={(id) => { setPicked(id === picked ? null : id); setError(null); }} /></div></div>
-          : <p className="text-sm text-text-muted">loading…</p>}
+        {t ? <>
+          <div className="sm:hidden"><TopologyStack t={t} selected={picked} onPick={pick} /></div>
+          <div className="hidden overflow-x-auto sm:block"><div className="min-w-[880px]"><TopologyCanvas t={t} selected={picked} onPick={pick} /></div></div>
+        </> : <EmptyState title="loading…" />}
         <TopologyLegend />
         <ErrorLine error={error} />
       </Card>

@@ -30,6 +30,9 @@ export type {
 export { SubNav } from './components/SubNav';
 export type { SubNavItem } from './components/SubNav';
 export { PageShell } from './components/PageShell';
+export { PageHeader } from './components/PageHeader';
+export { PillRow, pillClass } from './components/Pills';
+export { EmptyState } from './components/EmptyState';
 export { BuildFooter } from './components/BuildFooter';
 
 // Base-path routing (combined single-origin bundle; identity when standalone)
@@ -37,6 +40,7 @@ export { BasePathProvider, useBase, withBase, AppLink, useNavTo } from './base-p
 
 // Tokens
 export { LAYOUT, CHIP_COLORS } from './tokens';
+export type { PageWidth } from './tokens';
 
 // Host resolution
 export {

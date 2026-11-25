@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavTo } from '@ui-oracle/shared-ui';
+import { PageShell, useNavTo } from '@ui-oracle/shared-ui';
 import { useAuth } from '../contexts/AuthContext';
 
 export function Login() {
@@ -31,8 +31,8 @@ export function Login() {
   }
 
   return (
-    <div className="min-h-[calc(100vh-60px)] flex items-center justify-center p-6">
-      <div className="bg-bg-card border border-border rounded-2xl p-12 max-w-[400px] w-full text-center">
+    <PageShell width="form" className="flex min-h-[calc(100vh-60px)] items-center justify-center">
+      <div className="bg-bg-card border border-border rounded-xl p-6 md:p-12 max-w-[400px] w-full text-center">
         <div className="text-4xl font-bold text-accent mb-6">Oracle</div>
         <h1 className="text-2xl font-semibold text-text-primary mb-2">Sign In</h1>
         <p className="text-text-secondary text-sm mb-8">Enter your password to access the dashboard</p>
@@ -59,12 +59,12 @@ export function Login() {
           <button
             type="submit"
             disabled={loading || !password.trim()}
-            className="w-full bg-accent border-none text-white py-4 rounded-lg text-base font-medium cursor-pointer transition-colors duration-200 hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-accent border-none text-white px-4 py-3 rounded-lg text-base font-medium cursor-pointer transition-colors duration-200 hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? 'Signing in...' : 'Sign In'}
           </button>
         </form>
       </div>
-    </div>
+    </PageShell>
   );
 }

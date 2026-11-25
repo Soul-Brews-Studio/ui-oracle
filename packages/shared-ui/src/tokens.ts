@@ -10,7 +10,11 @@ export const LAYOUT = {
   px: 6,
   /** Default vertical padding (Tailwind scale). */
   py: 6,
+  /** Page widths (PageShell `width`). One app, three widths. */
+  widths: { reading: '900px', wide: '1152px', form: '640px', full: 'none' },
 } as const;
+
+export type PageWidth = keyof typeof LAYOUT.widths;
 
 export const CHIP_COLORS = {
   checking: {

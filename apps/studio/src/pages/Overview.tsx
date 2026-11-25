@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { PageShell, AppLink as Link } from '@ui-oracle/shared-ui';
+import { PageShell, PageHeader, AppLink as Link } from '@ui-oracle/shared-ui';
 import { getStats, reflect, stripProjectPrefix } from '../api/oracle';
 import type { Document, Stats } from '../api/oracle';
 
@@ -73,11 +73,10 @@ export function Overview() {
   }
 
   return (
-    <PageShell maxWidth="900px">
+    <PageShell width="reading">
       <style>{wisdomAnimationStyle}</style>
 
-      <h1 className="text-4xl font-bold text-text-primary mb-2 text-center">Oracle Overview</h1>
-      <p className="text-text-secondary text-center mb-12">Your knowledge base at a glance</p>
+      <PageHeader title="Oracle Overview" subtitle="Your knowledge base at a glance" />
 
       {connectionError && (
         <div className="bg-[rgba(239,68,68,0.1)] border border-[rgba(239,68,68,0.3)] rounded-lg p-4 mb-6 text-[#ef4444]">
@@ -89,31 +88,31 @@ export function Overview() {
         </div>
       )}
 
-      <div className="grid grid-cols-3 max-md:grid-cols-1 gap-4 mb-8">
-        <div className="bg-bg-card border border-border rounded-xl p-6 text-center">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
+        <div className="bg-bg-card border border-border rounded-xl p-4 md:p-6 text-center">
           <div className="text-[32px] font-bold text-accent mb-1">{stats?.total?.toLocaleString() || 0}</div>
           <div className="text-xs uppercase text-text-muted tracking-wide">Documents</div>
         </div>
-        <div className="bg-bg-card border border-border rounded-xl p-6 text-center">
+        <div className="bg-bg-card border border-border rounded-xl p-4 md:p-6 text-center">
           <div className="text-[32px] font-bold text-accent mb-1">{(stats?.by_type?.learning || 0).toLocaleString()}</div>
           <div className="text-xs uppercase text-text-muted tracking-wide">Learnings</div>
         </div>
-        <div className="bg-bg-card border border-border rounded-xl p-6 text-center">
+        <div className="bg-bg-card border border-border rounded-xl p-4 md:p-6 text-center">
           <div className="text-[32px] font-bold text-accent mb-1">{(stats?.by_type?.retro || 0).toLocaleString()}</div>
           <div className="text-xs uppercase text-text-muted tracking-wide">Retros</div>
         </div>
-        <div className="bg-bg-card border border-border rounded-xl p-6 text-center">
+        <div className="bg-bg-card border border-border rounded-xl p-4 md:p-6 text-center">
           <div className="text-[32px] font-bold text-accent mb-1">{stats?.by_type?.principle || 0}</div>
           <div className="text-xs uppercase text-text-muted tracking-wide">Principles</div>
         </div>
-        <div className="bg-bg-card border border-border rounded-xl p-6 text-center">
+        <div className="bg-bg-card border border-border rounded-xl p-4 md:p-6 text-center">
           <div className={`text-[32px] font-bold mb-1 ${stats?.is_stale ? 'text-accent' : 'text-success'}`}>
             {stats?.is_stale ? 'Stale' : 'Healthy'}
           </div>
           <div className="text-xs uppercase text-text-muted tracking-wide">Status</div>
         </div>
         {stats?.vector && (
-          <div className="bg-bg-card border border-border rounded-xl p-6 text-center">
+          <div className="bg-bg-card border border-border rounded-xl p-4 md:p-6 text-center">
             <div className={`text-[32px] font-bold mb-1 ${stats.vector.enabled ? 'text-success' : 'text-accent'}`}>
               {stats.vector.count.toLocaleString()}
             </div>
@@ -125,7 +124,7 @@ export function Overview() {
       {wisdom && (
         <>
           <div
-            className="relative rounded-[20px] p-[2px] mb-12 overflow-hidden cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_32px_rgba(167,139,250,0.2)]"
+            className="relative rounded-[20px] p-[2px] mb-8 overflow-hidden cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_32px_rgba(167,139,250,0.2)]"
             style={{
               background: 'linear-gradient(145deg, rgba(15, 10, 25, 0.9), rgba(25, 15, 40, 0.8))',
               border: '1px solid rgba(167, 139, 250, 0.3)',

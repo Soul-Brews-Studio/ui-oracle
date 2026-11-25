@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { hostLabel, useBase } from '@ui-oracle/shared-ui';
+import { EmptyState, PageShell, hostLabel, useBase } from '@ui-oracle/shared-ui';
 
 const SCHEDULE_ORIGIN = 'https://schedule.buildwithoracle.com';
 
@@ -22,8 +22,10 @@ export function Schedule() {
   }, [base, navigate]);
 
   return (
-    <div className="min-h-[60vh] flex items-center justify-center text-text-muted text-sm">
-      Redirecting to {SCHEDULE_ORIGIN} …
-    </div>
+    <PageShell width="form">
+      <EmptyState title="Schedule lives on its own site — opening schedule.buildwithoracle.com…">
+        <a className="text-accent underline" href={SCHEDULE_ORIGIN}>Open Schedule now</a>
+      </EmptyState>
+    </PageShell>
   );
 }

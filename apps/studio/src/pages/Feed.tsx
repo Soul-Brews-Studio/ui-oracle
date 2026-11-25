@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useBase } from '@ui-oracle/shared-ui';
+import { EmptyState, PageShell, useBase } from '@ui-oracle/shared-ui';
 
 const FEED_ORIGIN = 'https://feed.buildwithoracle.com';
 
@@ -22,8 +22,10 @@ export function Feed() {
   }, [base, navigate]);
 
   return (
-    <div className="max-w-[1300px] mx-auto py-10 px-6 text-text-secondary">
-      <p className="text-sm">Redirecting to <a className="text-accent underline" href={FEED_ORIGIN}>{FEED_ORIGIN}</a>…</p>
-    </div>
+    <PageShell width="form">
+      <EmptyState title="Feed lives on its own site — opening feed.buildwithoracle.com…">
+        <a className="text-accent underline" href={FEED_ORIGIN}>Open Feed now</a>
+      </EmptyState>
+    </PageShell>
   );
 }

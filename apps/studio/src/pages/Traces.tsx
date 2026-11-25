@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { useNavTo } from '@ui-oracle/shared-ui';
+import { useNavTo, EmptyState, PageHeader } from '@ui-oracle/shared-ui';
 import { SidebarLayout, TOOLS_NAV } from '../components/SidebarLayout';
 import { getDocDisplayInfo } from '../utils/docDisplay';
 import { Spinner } from '../components/ui/Spinner';
@@ -779,11 +779,11 @@ export function Traces() {
       activeType={statusFilter}
       onTypeChange={setStatusFilter}
     >
-      <h1 className="text-[32px] font-semibold text-text-primary mb-3">Discovery Traces</h1>
-      <p className="text-text-secondary text-base mb-8">
-        Your discovery journeys — what you searched and found
-        <span className="block mt-2 italic text-accent text-sm">"Trace → Dig → Distill → Awakening"</span>
-      </p>
+      <PageHeader
+        title="Discovery Traces"
+        subtitle={<>Your discovery journeys — what you searched and found
+          <span className="block mt-2 italic text-accent text-sm">"Trace → Dig → Distill → Awakening"</span></>}
+      />
 
       {loading ? (
         <div className="text-center py-20 px-6 text-text-muted flex flex-col items-center gap-3">
@@ -791,12 +791,9 @@ export function Traces() {
           Loading traces...
         </div>
       ) : traces.length === 0 ? (
-        <div className="text-center py-20 px-6 text-text-muted">
-          <p>No traces recorded yet.</p>
-          <p className="mt-4 text-sm">
-            Use <code className="py-1 px-2 rounded text-accent" style={{ background: 'rgba(167, 139, 250, 0.15)' }}>/trace</code> or <code className="py-1 px-2 rounded text-accent" style={{ background: 'rgba(167, 139, 250, 0.15)' }}>oracle_trace()</code> to log discoveries.
-          </p>
-        </div>
+        <EmptyState title="No traces recorded yet.">
+          Use <code className="py-1 px-2 rounded text-accent" style={{ background: 'rgba(167, 139, 250, 0.15)' }}>/trace</code> or <code className="py-1 px-2 rounded text-accent" style={{ background: 'rgba(167, 139, 250, 0.15)' }}>oracle_trace()</code> to log discoveries.
+        </EmptyState>
       ) : (
         <>
           <div className="text-text-muted text-sm mb-8 pb-4 border-b border-border">

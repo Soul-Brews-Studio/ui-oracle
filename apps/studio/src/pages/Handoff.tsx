@@ -1,3 +1,4 @@
+import { EmptyState, PageHeader } from '@ui-oracle/shared-ui';
 import { useState, useEffect } from 'react';
 import Markdown from 'react-markdown';
 import { SidebarLayout, TOOLS_NAV } from '../components/SidebarLayout';
@@ -90,20 +91,17 @@ export function Handoff() {
 
   return (
     <SidebarLayout navItems={TOOLS_NAV} navTitle="Tools" filters={[]}>
-      <h1 className="text-[32px] font-bold text-text-primary mb-2">Inbox</h1>
-      <p className="text-text-secondary mb-8">
-        Session handoffs from <code className="bg-bg-card px-1.5 py-0.5 rounded text-[13px]">oracle_handoff()</code>
-      </p>
+      <PageHeader
+        title="Inbox"
+        subtitle={<>Session handoffs from <code className="bg-bg-card px-1.5 py-0.5 rounded text-[13px]">oracle_handoff()</code></>}
+      />
 
       {loading ? (
-        <div className="text-text-muted py-12 text-center">Loading inbox...</div>
+        <div className="text-text-secondary text-sm py-12 text-center">Loading inbox...</div>
       ) : files.length === 0 ? (
-        <div className="text-center py-16 text-text-secondary">
-          <p className="my-2">No handoffs yet.</p>
-          <p className="text-sm text-text-muted my-2">
-            Use <code className="bg-bg-card px-1.5 py-0.5 rounded text-[13px]">oracle_handoff(content)</code> to save session context for future sessions.
-          </p>
-        </div>
+        <EmptyState title="No handoffs yet.">
+          Use <code className="bg-bg-primary px-1.5 py-0.5 rounded text-[13px]">oracle_handoff(content)</code> to save session context for future sessions.
+        </EmptyState>
       ) : (
         <>
           <div className="text-text-muted text-sm mb-4">

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { PageShell } from '@ui-oracle/shared-ui';
+import { PageShell, PageHeader, EmptyState } from '@ui-oracle/shared-ui';
 import { search } from '../api/oracle';
 import type { Document } from '../api/oracle';
 import { LogCard } from '../components/LogCard';
@@ -80,16 +80,17 @@ export function Search() {
   }
 
   return (
-    <PageShell maxWidth="720px">
-      <h1 className="text-[32px] font-bold text-text-primary mb-6 text-center">Search Oracle</h1>
+    <PageShell width="reading">
+      <div className="max-w-[720px] mx-auto">
+      <PageHeader title="Search Oracle" />
 
-      <form onSubmit={handleSubmit} className="flex gap-3 mb-8">
+      <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-3 mb-8">
         <input
           type="text"
           value={query}
           onChange={e => setQuery(e.target.value)}
           placeholder="Search for patterns, principles, learnings..."
-          className="flex-1 bg-bg-card border border-border text-text-primary px-5 py-4 rounded-lg text-base outline-none transition-colors duration-200 focus:border-accent placeholder:text-text-muted [&::-webkit-search-cancel-button]:hidden [&::-webkit-clear-button]:hidden [&::-ms-clear]:hidden"
+          className="flex-1 min-w-0 bg-bg-card border border-border text-text-primary px-5 py-4 rounded-lg text-base outline-none transition-colors duration-200 focus:border-accent placeholder:text-text-muted [&::-webkit-search-cancel-button]:hidden [&::-webkit-clear-button]:hidden [&::-ms-clear]:hidden"
           style={{ WebkitAppearance: 'none' }}
           autoFocus
         />
@@ -116,9 +117,7 @@ export function Search() {
               ))}
             </div>
           ) : (
-            <div className="text-center text-text-muted py-12 bg-bg-card rounded-xl">
-              No results found. Try a different search term.
-            </div>
+            <EmptyState title="No results found.">Try a different search term.</EmptyState>
           )}
         </div>
       )}
@@ -150,7 +149,7 @@ export function Search() {
             </div>
           )}
 
-          <p className="text-text-muted text-sm mb-4">Try searching for:</p>
+          <p className="text-text-secondary text-sm mb-4">Try searching for:</p>
           <div className="flex justify-center gap-2 flex-wrap">
             {['trust', 'safety', 'git', 'context', 'pattern'].map(term => (
               <button key={term} type="button" onClick={() => runSearch(term)} className={CHIP}>
@@ -160,6 +159,7 @@ export function Search() {
           </div>
         </div>
       )}
+      </div>
     </PageShell>
   );
 }

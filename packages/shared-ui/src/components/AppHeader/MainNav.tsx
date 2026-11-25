@@ -2,6 +2,7 @@ import { Link, useLocation } from 'react-router-dom';
 import type { CrossOriginResolver, NavItem } from './nav-types';
 import { isActiveInApp, isActiveNav } from './nav-types';
 import { NavDisclosure } from './NavDisclosure';
+import { externalHost } from './external';
 
 interface MainNavProps {
   items: NavItem[];
@@ -51,8 +52,9 @@ export function MainNav({ items, crossOriginHref, combinedMode = false, inAppHre
         }`;
         if (href) {
           return (
-            <a key={href} href={href} className={cls} aria-current={active ? 'page' : undefined}>
+            <a key={href} href={href} className={cls} aria-current={active ? 'page' : undefined} title={`Opens ${externalHost(href)}`}>
               {item.label}
+              <span aria-hidden="true" className="ml-1 text-[11px] text-text-muted">↗</span>
             </a>
           );
         }

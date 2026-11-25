@@ -56,7 +56,7 @@ export default function Compare() {
   const currentHost = hostLabel().replace(' (default)', '');
 
   return (
-    <PageShell>
+    <PageShell width="wide">
       <CompareHUD
         query={query}
         onQueryChange={setQuery}

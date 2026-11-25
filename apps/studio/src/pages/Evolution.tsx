@@ -1,3 +1,4 @@
+import { EmptyState, PageHeader } from '@ui-oracle/shared-ui';
 import { useState, useEffect } from 'react';
 import { SidebarLayout, TOOLS_NAV } from '../components/SidebarLayout';
 import { API_BASE } from '../api/oracle';
@@ -96,21 +97,18 @@ export function Evolution() {
       activeType={typeFilter}
       onTypeChange={setTypeFilter}
     >
-      <h1 className="text-[1.75rem] font-semibold text-text-primary mb-2">Knowledge Evolution</h1>
-      <p className="text-text-secondary text-[0.95rem] mb-6">
-        Track how knowledge evolves — what was superseded and why
-        <span className="block italic text-[#c084fc] mt-1 text-sm">"Nothing is Deleted"</span>
-      </p>
+      <PageHeader
+        title="Knowledge Evolution"
+        subtitle={<>Track how knowledge evolves — what was superseded and why
+          <span className="block italic text-[#c084fc] mt-1 text-sm">"Nothing is Deleted"</span></>}
+      />
 
       {loading ? (
-        <div className="text-center py-12 text-text-muted">Loading supersessions...</div>
+        <div className="text-center py-12 text-sm text-text-secondary">Loading supersessions...</div>
       ) : filtered.length === 0 ? (
-        <div className="text-center py-12 text-text-secondary bg-bg-secondary rounded-xl mt-4">
-          <p>No supersessions recorded yet.</p>
-          <p className="text-sm text-text-muted mt-2">
-            Use <code className="bg-bg-card px-2 py-0.5 rounded text-sm">oracle_supersede()</code> to track document evolution.
-          </p>
-        </div>
+        <EmptyState title="No supersessions recorded yet.">
+          Use <code className="bg-bg-primary px-2 py-0.5 rounded text-sm">oracle_supersede()</code> to track document evolution.
+        </EmptyState>
       ) : (
         <>
           <div className="text-text-muted text-sm mb-4 pb-4 border-b border-border">

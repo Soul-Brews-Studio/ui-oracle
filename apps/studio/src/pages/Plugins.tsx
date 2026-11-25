@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { PageShell, PageHeader } from '@ui-oracle/shared-ui';
 import { getPlugins, loadPlugin } from '../api/oracle';
 import type { PluginInfo } from '../api/oracle';
 
@@ -65,12 +66,8 @@ export function Plugins() {
   }
 
   return (
-    <div className="min-h-[calc(100vh-64px)] bg-[#0a0a0f]">
-      <div className="max-w-[960px] mx-auto px-6 py-6">
-        <div className="flex items-center gap-4 mb-6">
-          <h1 className="text-2xl font-bold text-white">WASM Plugins</h1>
-          <span className="text-sm font-mono text-white/40">{plugins.length} loaded</span>
-        </div>
+    <PageShell width="reading">
+        <PageHeader title="WASM Plugins" subtitle={`${plugins.length} loaded`} />
 
         {/* Plugin cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
@@ -168,7 +165,6 @@ export function Plugins() {
             </div>
           </div>
         )}
-      </div>
-    </div>
+    </PageShell>
   );
 }

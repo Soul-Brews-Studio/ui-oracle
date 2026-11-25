@@ -27,8 +27,8 @@ const ENV_DEFAULT =
   (import.meta as { env?: { VITE_DEFAULT_HOST?: string } }).env?.VITE_DEFAULT_HOST;
 // Served BY an arra backend (its ORACLE_FRONTEND_DIST, e.g. http://localhost:47944/): the backend is the
 // page's own origin. The public studio domains and the vite dev/preview ports keep the localhost default.
-function selfServedOrigin(): string | null {
-  if (typeof window === 'undefined') return null;
+export function selfServedOrigin(): string | null {
+  if (typeof window === 'undefined' || !window.location) return null;
   const { hostname, port, origin, protocol } = window.location;
   if (protocol !== 'http:' && protocol !== 'https:') return null;
   if (/(?:\.buildwithoracle\.com|\.workers\.dev|\.pages\.dev)$/i.test(hostname)) return null;

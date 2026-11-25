@@ -6,7 +6,7 @@ import { useId, type ComponentPropsWithoutRef, type ReactNode } from 'react';
 type GlassProps = ComponentPropsWithoutRef<'div'>;
 
 export function Glass({ className = '', children, ...props }: GlassProps) {
-  const classes = `glass rounded-2xl ${className}`.trim();
+  const classes = `glass rounded-xl ${className}`.trim();
   return <div className={classes} {...props}>{children}</div>;
 }
 
@@ -47,11 +47,11 @@ export function StatCard({
   return (
     <article
       aria-labelledby={labelId}
-      className={`glass glass-hover min-w-0 rounded-2xl border p-4 transition-[background-color,border-color,box-shadow] duration-200 ease-out ${toneClasses[tone]}`}
+      className={`glass glass-hover min-w-0 rounded-xl border p-4 transition-[background-color,border-color,box-shadow] duration-200 ease-out ${toneClasses[tone]}`}
     >
       <p id={labelId} className="text-xs font-medium uppercase tracking-[0.2em] text-text-muted">{label}</p>
       <div className="mt-2 flex flex-wrap items-baseline gap-2">
-        <p className={`text-3xl font-semibold ${valueClasses[tone]}`} aria-live="polite">{value}</p>
+        <p className={`break-words text-2xl font-semibold sm:text-3xl ${valueClasses[tone]}`} aria-live="polite">{value}</p>
         {trend ? <span className="rounded-full border border-border bg-surface px-2 py-0.5 text-xs font-medium text-text-muted">{trend}</span> : null}
       </div>
       <p className="mt-1 break-words text-sm text-text-muted">{detail}</p>

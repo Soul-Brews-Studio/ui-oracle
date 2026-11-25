@@ -6,6 +6,7 @@
  */
 
 import { useCallback, useEffect, useState } from 'react';
+import { PageHeader, PillRow, pillClass } from '@ui-oracle/shared-ui';
 import { hubApi as defaultApi, OwnerOnlyError, type ArraStatus, type HubApi, type HubNodeRow, type InviteRow, type PublicHub } from './api';
 import { TABS, tabFromHash, type Tab } from './format';
 import { GraphView } from './GraphView';
@@ -50,22 +51,21 @@ export function HubApp({ api = defaultApi }: { api?: HubApi }) {
 
   const hubName = status?.hub?.name ?? publicHub?.hub ?? null;
   return (
-    <div className="grid min-w-0 gap-4">
-      <div className="glass flex flex-wrap items-center justify-between gap-3 rounded-2xl p-2">
-        <nav className="flex flex-wrap gap-1" aria-label="hub pages">
-          {TABS.map((t) => (
-            <a key={t} href={`#/${t}`} aria-current={tab === t ? 'page' : undefined}
-              className={`focus-ring rounded-xl px-4 py-2 text-sm font-semibold transition ${tab === t ? 'border border-accent-border bg-accent-soft text-accent' : 'border border-transparent text-text-muted hover:text-text'}`}>{LABEL[t]}</a>
-          ))}
-        </nav>
-        <div className="flex flex-wrap items-center gap-3 px-2 text-sm">
-          <span className="font-semibold text-text">{hubName ? `hub:${hubName}` : 'not a hub'}</span>
+    <div className="min-w-0">
+      <PageHeader title="Hub" subtitle="Machines that joined this hub, how they connect, and what arra stores." actions={
+        <>
+          <span className="text-sm font-semibold text-text">{hubName ? `hub:${hubName}` : 'not a hub'}</span>
           <span data-testid="viewer" className={`rounded-full border px-3 py-0.5 text-xs font-semibold ${owner ? 'status-ok' : 'status-warn'}`}>
             {owner === null ? 'checking…' : owner ? 'owner (this machine)' : 'visitor (read-only)'}
           </span>
-          {owner && <label className="flex items-center gap-2 text-text-muted"><input type="checkbox" className="h-4 w-4 accent-[var(--color-accent)]" checked={showIps} onChange={(e) => setShowIps(e.target.checked)} /> show addresses</label>}
-        </div>
-      </div>
+          {owner && <label className="flex items-center gap-2 text-sm text-text-muted"><input type="checkbox" className="h-4 w-4 accent-[var(--color-accent)]" checked={showIps} onChange={(e) => setShowIps(e.target.checked)} /> show addresses</label>}
+        </>
+      } />
+      <PillRow label="hub pages" className="mb-6">
+        {TABS.map((t) => (
+          <a key={t} href={`#/${t}`} role="tab" aria-selected={tab === t} aria-current={tab === t ? 'page' : undefined} className={`focus-ring ${pillClass(tab === t)}`}>{LABEL[t]}</a>
+        ))}
+      </PillRow>
       <div className="grid min-w-0 gap-4">
         <ErrorLine error={error} />
         {tab === 'status' && <StatusView status={status} publicHub={publicHub} />}

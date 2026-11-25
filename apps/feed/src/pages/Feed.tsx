@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { list } from '../api/oracle';
 import type { Document } from '../api/oracle';
 import { LogCard } from '../components/LogCard';
+import { PageHeader } from '@ui-oracle/shared-ui';
 import { SidebarLayout } from '../components/SidebarLayout';
 
 export function Feed() {
@@ -46,10 +47,10 @@ export function Feed() {
 
   return (
     <SidebarLayout activeType={type} onTypeChange={setType}>
-      <h1 className="text-[32px] font-bold text-text-primary mb-2">Knowledge Feed</h1>
-      <p className="text-base text-text-secondary mb-8">
-        Browse Oracle's indexed knowledge — principles, learnings, and retrospectives
-      </p>
+      <PageHeader
+        title="Knowledge Feed"
+        subtitle="Browse Oracle's indexed knowledge — principles, learnings, and retrospectives"
+      />
 
       <div className="flex flex-col">
         {docs.map(doc => (
@@ -57,7 +58,7 @@ export function Feed() {
         ))}
       </div>
 
-      {loading && <div className="text-center text-text-muted py-6">Loading...</div>}
+      {loading && <div className="text-center text-sm text-text-secondary py-6">Loading...</div>}
 
       {!loading && hasMore && (
         <button

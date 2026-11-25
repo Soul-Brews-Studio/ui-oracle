@@ -1,8 +1,9 @@
 /**
- * Fixed bottom-of-page footer showing the frontend build version and build date.
+ * End-of-page footer showing the frontend build version and build date.
+ * In document flow (not fixed): a fixed stamp sat on top of legends, graphs and
+ * menu rows. Full-screen scenes simply scroll a few pixels to reach it.
  * Version comes from __APP_VERSION__ (v<pkg>+<gitHash>) and the date from
  * __BUILD_DATE__ (ISO string), both injected by each app's vite.config.ts.
- * Non-interactive, pointer-events-none so it never blocks the 3D canvas beneath.
  */
 function formatBuildDate(iso: string): string {
   if (!iso || iso === 'dev') return 'dev';
@@ -23,7 +24,7 @@ export function BuildFooter() {
     typeof __BUILD_DATE__ !== 'undefined' ? formatBuildDate(__BUILD_DATE__) : 'dev';
   return (
     <footer
-      className="fixed bottom-0 inset-x-0 z-20 pointer-events-none flex justify-center pb-1"
+      className="flex justify-center py-3"
       aria-label="build info"
     >
       <span className="text-[10px] font-mono text-text-muted/70">

@@ -1,5 +1,6 @@
+import { Children, isValidElement } from 'react';
 import { useLocation } from 'react-router-dom';
-import { AppLink as Link } from '@ui-oracle/shared-ui';
+import { AppLink as Link, PageHeader, PageShell, PillRow, pillClass } from '@ui-oracle/shared-ui';
 
 const DEFAULT_TYPES = [
   { key: 'all', label: 'All' },
@@ -46,27 +47,27 @@ export function SidebarLayout({
   navItems,
 }: SidebarLayoutProps) {
   const location = useLocation();
+  // Title first, then the section pills, like every other page: a leading
+  // <PageHeader> child is lifted above the pill row.
+  const [first, ...rest] = Children.toArray(children);
+  const header = isValidElement(first) && first.type === PageHeader ? first : null;
 
   return (
-    <div className="max-w-[900px] mx-auto px-6 py-8 max-md:px-3 max-md:py-4">
-      {/* Horizontal pill bar */}
-      <div className="flex items-center gap-1.5 mb-6 flex-wrap">
+    <PageShell width="reading">
+      {header}
+      <PillRow className="mb-6" label="Sections">
         {navItems && navItems.length > 0 && (
           <>
             {navItems.map(item => (
               <Link
                 key={item.path}
                 to={item.path}
-                className={`px-3 py-1.5 rounded-lg text-[13px] transition-all duration-150 ${
-                  location.pathname === item.path
-                    ? 'bg-bg-card text-accent font-medium'
-                    : 'text-text-secondary hover:bg-bg-card hover:text-text-primary'
-                }`}
+                className={pillClass(location.pathname === item.path)}
               >
                 {item.label}
               </Link>
             ))}
-            {filters.length > 0 && <span className="w-px h-4 bg-border mx-1" />}
+            {filters.length > 0 && <span className="w-px h-4 shrink-0 bg-border mx-1" />}
           </>
         )}
         {filters.length > 0 && filters.map(t => (
@@ -75,11 +76,7 @@ export function SidebarLayout({
               key={t.key}
               type="button"
               onClick={() => onTypeChange(t.key)}
-              className={`px-3 py-1.5 rounded-lg text-[13px] border-none cursor-pointer font-[inherit] transition-all duration-150 ${
-                activeType === t.key
-                  ? 'bg-accent/10 text-accent font-medium'
-                  : 'bg-transparent text-text-secondary hover:bg-bg-card hover:text-text-primary'
-              }`}
+              className={pillClass(activeType === t.key)}
             >
               {t.label}
             </button>
@@ -87,22 +84,17 @@ export function SidebarLayout({
             <Link
               key={t.key}
               to={t.key === 'all' ? linkBase : `${linkBase}?type=${t.key}`}
-              className={`px-3 py-1.5 rounded-lg text-[13px] transition-all duration-150 ${
-                activeType === t.key
-                  ? 'bg-accent/10 text-accent font-medium'
-                  : 'text-text-secondary hover:bg-bg-card hover:text-text-primary'
-              }`}
+              className={pillClass(activeType === t.key)}
             >
               {t.label}
             </Link>
           )
         ))}
-      </div>
+      </PillRow>
 
-      {/* Full-width content */}
       <div className="min-w-0">
-        {children}
+        {header ? rest : children}
       </div>
-    </div>
+    </PageShell>
   );
 }

@@ -1,3 +1,4 @@
+import { EmptyState } from '@ui-oracle/shared-ui';
 import type { ArraStatus, PublicHub } from './api';
 import { maskUrl, shortSha } from './format';
 import { Card, Stat } from './ui';
@@ -7,26 +8,26 @@ export function StatusView({ status, publicHub }: { status: ArraStatus | null; p
     return (
       <Card title="Hub (public card)">
         {publicHub ? (
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <Stat label="hub" value={publicHub.hub} />
             <Stat label="active nodes" value={publicHub.nodes} />
             <Stat label="vault commit" value={shortSha(publicHub.sha)} />
           </div>
-        ) : <p className="text-sm text-text-muted">This server is not a hub, or the hub card is not reachable from here.</p>}
+        ) : <EmptyState title="This server is not a hub, or the hub card is not reachable from here." />}
         <p className="mt-4 text-xs text-text-muted">You are viewing from another machine: nodes, search, invite and revoke are owner only.</p>
       </Card>
     );
   }
   const sources = Object.entries(status.docs.bySource).sort((a, b) => b[1] - a[1]);
   return (
-    <div className="space-y-5">
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <Stat label="hub" value={status.hub?.name ?? '-'} hint={status.hub ? 'serving /api/federation' : 'not a hub'} />
         <Stat label="active nodes" value={status.hub?.nodes ?? 0} />
         <Stat label="open invites" value={status.hub?.invitesOpen ?? 0} hint="codes last 10 minutes" />
         <Stat label="documents" value={status.docs.total} />
       </div>
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card title="Documents by source">
           <ul className="space-y-2 font-mono text-sm">
             {sources.length === 0 && <li className="text-text-muted">no documents yet</li>}

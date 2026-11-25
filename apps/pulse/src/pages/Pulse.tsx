@@ -52,7 +52,7 @@ export default function Pulse() {
   }, [status]);
 
   return (
-    <PageShell className="text-text-primary">
+    <PageShell width="wide" className="text-text-primary">
       <div className="flex justify-between items-start mb-6 max-md:flex-col max-md:gap-3">
         <div>
           <h1 className="text-[32px] font-bold text-text-primary mb-2">Pulse 🫀</h1>

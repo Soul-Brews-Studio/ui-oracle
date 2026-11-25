@@ -50,7 +50,7 @@ export function GraphView({ api = defaultApi, initial = null }: { api?: GraphApi
           {graph && graph.nodes.length > 0
             ? <GraphCanvas nodes={canvasNodes} edges={graph.edges} selected={selected} onSelect={setSelected}
                 showLabels={(n) => n.kind !== 'Document' || docCount <= 15} />
-            : <div className="flex h-[620px] items-center justify-center rounded-2xl bg-field text-sm text-text-muted">{graph ? 'Nothing indexed for this source yet.' : 'Loading…'}</div>}
+            : <div className="flex h-[360px] sm:h-[620px] items-center justify-center rounded-xl bg-field text-sm text-text-muted">{graph ? 'Nothing indexed for this source yet.' : 'Loading…'}</div>}
           <aside data-testid="graph-detail" className="space-y-3 rounded-lg border border-border bg-field p-4 text-sm">
             {!node && <p className="text-text-muted">Tap a dot. A note opens here; topics, sources and vaults light up what they link to.</p>}
             {node && <div><div className="text-xs uppercase tracking-wider text-text-muted">{KIND_NAME[node.kind] ?? node.kind}</div><div className="mt-1 text-text">{node.label}</div>

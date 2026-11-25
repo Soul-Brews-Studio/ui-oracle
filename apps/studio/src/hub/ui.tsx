@@ -1,12 +1,13 @@
 /** Small shared pieces of the hub UI. */
 
 import type { ReactNode } from 'react';
+import { EmptyState } from '@ui-oracle/shared-ui';
 import { Badge as StudioBadge, Glass, StatCard, type BadgeTone } from './kit';
 
 /** Hub pages are a Studio route (#3110): cards, stats and badges are Studio's own components. */
 export function Card({ title, children, right }: { title: string; children: ReactNode; right?: ReactNode }) {
   return (
-    <Glass className="min-w-0 p-5 sm:p-6">
+    <Glass className="min-w-0 p-4 sm:p-6">
       <section>
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-lg font-semibold text-text">{title}</h2>
@@ -28,12 +29,11 @@ export function Badge({ tone, children }: { tone: BadgeTone; children: ReactNode
 
 export function OwnerOnly({ what }: { what: string }) {
   return (
-    <div data-testid="owner-only" className="status-warn rounded-3xl border p-5">
-      <div className="font-semibold">Owner only</div>
-      <p className="mt-1 text-sm">
+    <div data-testid="owner-only">
+      <EmptyState title="Owner only">
         {what} is served by <code className="font-mono">/api/arra</code>, which answers only on the hub machine itself.
         Open <code className="font-mono">http://127.0.0.1:&lt;port&gt;/hub</code> there. Other machines see the public hub card on Status.
-      </p>
+      </EmptyState>
     </div>
   );
 }

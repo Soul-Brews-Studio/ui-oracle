@@ -1,5 +1,5 @@
 import { useParams, useLocation } from 'react-router-dom';
-import { AppLink as Link, useNavTo } from '@ui-oracle/shared-ui';
+import { PageShell, EmptyState, AppLink as Link, useNavTo } from '@ui-oracle/shared-ui';
 import { useState, useEffect, useCallback } from 'react';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -260,15 +260,16 @@ export function DocDetail() {
 
   if (error || !doc) {
     return (
-      <div className="text-center py-16 px-6 text-text-muted">
-        <p>{error || 'Document not found'}</p>
-        <button
-          onClick={() => navigate(-1)}
-          className="mt-4 bg-bg-card border border-border text-text-primary py-3 px-6 rounded-lg cursor-pointer text-sm hover:border-accent transition-colors duration-200"
-        >
-          Go Back
-        </button>
-      </div>
+      <PageShell width="reading">
+        <EmptyState title={error || 'Document not found'}>
+          <button
+            onClick={() => navigate(-1)}
+            className="mt-2 bg-bg-card border border-border text-text-primary px-4 py-2 rounded-lg cursor-pointer text-sm hover:border-accent transition-colors duration-200"
+          >
+            Go Back
+          </button>
+        </EmptyState>
+      </PageShell>
     );
   }
 

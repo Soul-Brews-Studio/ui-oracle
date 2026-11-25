@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { AppLink as Link } from '@ui-oracle/shared-ui';
+import { PageShell, PageHeader, PillRow, pillClass, EmptyState, AppLink as Link } from '@ui-oracle/shared-ui';
 import { getDashboardSummary, getDashboardActivity, getDashboardGrowth } from '../api/oracle';
 import type { DashboardSummary, DashboardActivity, DashboardGrowth } from '../api/oracle';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts';
@@ -92,50 +92,45 @@ export function Activity() {
   }
 
   return (
-    <div className="max-w-[1000px] mx-auto py-8 px-6">
-      <header className="mb-8">
-        <h1 className="text-[32px] font-bold text-text-primary mb-2">Activity</h1>
-        <p className="text-base text-text-secondary">Search logs and learning history</p>
-      </header>
+    <PageShell width="wide">
+      <PageHeader title="Activity" subtitle="Search logs and learning history" />
 
       {/* Period Selector */}
-      <div className="flex gap-2 mb-6 max-md:flex-wrap">
+      <PillRow label="Period" className="mb-6">
         {PERIODS.map(p => (
           <button
             key={p}
             type="button"
             onClick={() => setPeriod(p)}
-            className={`bg-bg-card border border-border text-text-secondary px-4 py-2 rounded-lg cursor-pointer text-sm transition-all duration-200 hover:border-accent hover:text-text-primary ${
-              period === p ? '!bg-accent !border-accent !text-bg-primary font-medium' : ''
-            }`}
+            role="tab"
+            aria-selected={period === p}
+            className={pillClass(period === p)}
           >
             {p === 'week' ? '7 days' : p === 'month' ? '30 days' : '90 days'}
           </button>
         ))}
-      </div>
+      </PillRow>
 
       {/* Summary Cards - clickable to switch tabs */}
-      <div className="grid grid-cols-4 gap-4 mb-8 max-md:grid-cols-2 max-[480px]:grid-cols-1">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
         <button
           type="button"
           onClick={() => setActiveTab('gaps')}
-          className={`bg-bg-card border border-border rounded-xl p-5 text-center cursor-pointer transition-all duration-200 font-[inherit] hover:border-accent hover:-translate-y-0.5 ${
+          className={`bg-bg-card border border-border rounded-xl p-4 md:p-6 text-center cursor-pointer transition-all duration-200 font-[inherit] hover:border-accent hover:-translate-y-0.5 ${
             gaps.length > 0 ? '!border-[#f59e0b] !bg-[rgba(245,158,11,0.1)]' : ''
           } ${activeTab === 'gaps' ? '!border-accent shadow-[0_0_0_1px_var(--color-accent)]' : ''}`}
         >
-          <div className="text-2xl mb-2">⚠️</div>
           <div className={`text-[28px] font-bold mb-1 ${gaps.length > 0 ? 'text-[#f59e0b]' : 'text-text-primary'}`}>{gaps.length}</div>
           <div className="text-sm text-text-secondary mb-1">Knowledge Gaps</div>
-          <div className="text-xs text-text-muted">0 result queries</div>
+          <div className="text-xs text-text-secondary">0 result queries</div>
         </button>
         <button
           type="button"
           onClick={() => setActiveTab('searches')}
-          className={`bg-bg-card border border-border rounded-xl p-5 text-center cursor-pointer transition-all duration-200 font-[inherit] hover:border-accent hover:-translate-y-0.5 ${
+          className={`bg-bg-card border border-border rounded-xl p-4 md:p-6 text-center cursor-pointer transition-all duration-200 font-[inherit] hover:border-accent hover:-translate-y-0.5 ${
             activeTab === 'searches' ? '!border-accent shadow-[0_0_0_1px_var(--color-accent)]' : ''
           }`}
         >
-          <div className="text-2xl mb-2">🔍</div>
           <div className="text-[28px] font-bold text-text-primary mb-1">{summary?.activity.searches_7d ?? 0}</div>
           <div className="text-sm text-text-secondary mb-1">Searches</div>
           <div className="text-xs text-text-muted">avg {avgSearchTime}ms</div>
@@ -143,11 +138,10 @@ export function Activity() {
         <button
           type="button"
           onClick={() => setActiveTab('learnings')}
-          className={`bg-bg-card border border-border rounded-xl p-5 text-center cursor-pointer transition-all duration-200 font-[inherit] hover:border-accent hover:-translate-y-0.5 ${
+          className={`bg-bg-card border border-border rounded-xl p-4 md:p-6 text-center cursor-pointer transition-all duration-200 font-[inherit] hover:border-accent hover:-translate-y-0.5 ${
             activeTab === 'learnings' ? '!border-accent shadow-[0_0_0_1px_var(--color-accent)]' : ''
           }`}
         >
-          <div className="text-2xl mb-2">📚</div>
           <div className="text-[28px] font-bold text-text-primary mb-1">{summary?.activity.learnings_7d ?? 0}</div>
           <div className="text-sm text-text-secondary mb-1">Learnings</div>
           <div className="text-xs text-text-muted">this period</div>
@@ -156,7 +150,7 @@ export function Activity() {
 
       {/* Growth Chart */}
       {growth && growth.data.length > 0 && (
-        <div className="bg-bg-card border border-border rounded-xl p-6 mb-8">
+        <div className="bg-bg-card border border-border rounded-xl p-4 md:p-6 mb-8">
           <h2 className="text-lg font-semibold text-text-primary mb-0">Daily Activity</h2>
           <ResponsiveContainer width="100%" height={250}>
             <LineChart data={growth.data} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
@@ -187,7 +181,7 @@ export function Activity() {
       )}
 
       {/* Activity Timeline */}
-      <div className="bg-bg-card border border-border rounded-xl p-6">
+      <div className="bg-bg-card border border-border rounded-xl p-4 md:p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-text-primary">Recent Activity</h2>
           <button
@@ -264,10 +258,7 @@ export function Activity() {
             </div>
           ))}
           {activeTab === 'gaps' && gaps.length === 0 && (
-            <div className="text-center text-text-muted py-8">
-              <div className="text-[32px] mb-2">✨</div>
-              <div>No knowledge gaps! All searches found results.</div>
-            </div>
+            <EmptyState title="No knowledge gaps! All searches found results." className="border-0 bg-transparent" />
           )}
 
           {/* Searches Tab */}
@@ -312,13 +303,13 @@ export function Activity() {
 
           {/* Empty States */}
           {activeTab === 'searches' && !activity?.searches?.length && (
-            <div className="text-center text-text-muted py-8">No searches in this period</div>
+            <EmptyState title="No searches in this period" className="border-0 bg-transparent" />
           )}
           {activeTab === 'learnings' && !activity?.learnings?.length && (
-            <div className="text-center text-text-muted py-8">No learnings added in this period</div>
+            <EmptyState title="No learnings added in this period" className="border-0 bg-transparent" />
           )}
         </div>
       </div>
-    </div>
+    </PageShell>
   );
 }

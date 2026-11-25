@@ -32,7 +32,7 @@ export function GraphCanvas({ nodes, edges, selected, onSelect, showLabels, edge
   const box = useMemo(() => fitBox(pos), [pos]);
   const faded = (id: string) => selected !== null && !lit.has(id);
   return (
-    <svg data-testid="graph-canvas" viewBox={box} className="h-[620px] w-full rounded-2xl bg-field" onClick={() => onSelect(null)} role="img" aria-label="graph">
+    <svg data-testid="graph-canvas" viewBox={box} className="h-[360px] sm:h-[620px] w-full rounded-xl bg-field" onClick={() => onSelect(null)} role="img" aria-label="graph">
       <defs>
         <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" style={{ fill: 'var(--color-text-muted)' }} /></marker>
       </defs>

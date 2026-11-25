@@ -1,5 +1,6 @@
-import { useMemo, type ReactNode } from 'react';
-import { hostLabel, isStudioHost, isVectorHost } from '../../host';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useLocation } from 'react-router-dom';
+import { hostLabel, isStudioHost, isVectorHost, selfServedOrigin } from '../../host';
 import { Brand } from './Brand';
 import { VersionChip } from './VersionChip';
 import { BackendChip } from './BackendChip';
@@ -12,6 +13,7 @@ import { buildNavSet } from './nav-types';
 import bakedMenu from '../../baked-menu';
 import { reorderNavSet, type MenuConfig } from './reorder';
 import { SubNav } from '../SubNav';
+import { keepInApp, leavesSelfServedApp } from './external';
 
 const DEFAULT_NAV: NavSet = {
   main: [
@@ -118,6 +120,10 @@ interface AppHeaderProps {
 function defaultCrossOriginHref(item: NavItem): string | null {
   const currentHost = hostLabel().replace(' (default)', '');
 
+  if (selfServedOrigin()) {
+    return leavesSelfServedApp(item) ? buildHref(`https://${item.studio}`, item, currentHost) : null;
+  }
+
   if (item.studio) {
     if (typeof window !== 'undefined' && window.location.hostname === item.studio) {
       return null;
@@ -165,7 +171,15 @@ export function AppHeader({
   inAppHref,
 }: AppHeaderProps) {
   const { nav, loaded } = useMenu(fallbackNav, { skipFetch: BAKED_NAV !== null });
-  const reorderedNav = useMemo(() => reorderNavSet(nav, menuConfig), [nav, menuConfig]);
+  const reorderedNav = useMemo(() => {
+    const r = reorderNavSet(nav, menuConfig);
+    return { ...r, main: keepInApp(r.main), tools: keepInApp(r.tools) };
+  }, [nav, menuConfig]);
+  // Phones: the nav row folds behind one Menu button (it wrapped to three rows
+  // and pushed every page halfway down the screen). Closes on navigation.
+  const [menuOpen, setMenuOpen] = useState(false);
+  const { pathname } = useLocation();
+  useEffect(() => setMenuOpen(false), [pathname]);
   const backendVersion = useBackendVersion();
 
   return (
@@ -185,20 +199,33 @@ export function AppHeader({
             'linear-gradient(to right, transparent 0%, rgba(125,180,255,0.25) 20%, rgba(180,125,255,0.30) 50%, rgba(125,255,220,0.25) 80%, transparent 100%)',
         }}
       />
-      <div className="flex justify-between items-center gap-4 px-6 py-3 max-w-[1400px] mx-auto">
+      <div className="flex justify-between items-center gap-4 px-5 md:px-6 py-3 max-w-[1400px] mx-auto">
         <Brand label={brandLabel}>
           <VersionChip backendVersion={backendVersion} />
         </Brand>
 
-        <div className="flex items-center gap-2 text-xs font-mono shrink-0">
+        <div className="hidden md:flex items-center gap-2 text-xs font-mono shrink-0">
           <HostPicker />
           <BackendChip ping={ping} />
           {topRowExtras}
         </div>
+        <div className="flex md:hidden items-center gap-2 text-xs font-mono shrink-0">
+          <BackendChip ping={ping} />
+          <button
+            type="button"
+            aria-expanded={menuOpen}
+            aria-controls="app-main-nav"
+            onClick={() => setMenuOpen((o) => !o)}
+            className="px-3 py-1.5 rounded-lg border border-border text-[13px] font-sans text-text-primary bg-transparent cursor-pointer"
+          >
+            {menuOpen ? 'Close' : 'Menu'}
+          </button>
+        </div>
       </div>
 
       <nav
-        className={`flex items-center gap-1 px-6 pb-3 flex-wrap max-w-[1400px] mx-auto transition-opacity duration-150 ${
+        id="app-main-nav"
+        className={`${menuOpen ? 'flex' : 'hidden'} md:flex flex-wrap items-center gap-1 px-5 md:px-6 pb-3 max-w-[1400px] mx-auto transition-opacity duration-150 ${
           loaded ? 'opacity-100' : 'opacity-0'
         }`}
       >
@@ -220,6 +247,12 @@ export function AppHeader({
           </>
         )}
       </nav>
+      {menuOpen && (
+        <div className="md:hidden flex flex-wrap items-center gap-2 px-5 pb-3 text-xs font-mono">
+          <HostPicker />
+          {topRowExtras}
+        </div>
+      )}
       {menuConfig?.subnav && menuConfig.subnav.length > 0 && (
         <SubNav items={menuConfig.subnav} />
       )}

@@ -1,3 +1,4 @@
+import { EmptyState, PageHeader } from '@ui-oracle/shared-ui';
 import { useState, useEffect } from 'react';
 import { SidebarLayout, TOOLS_NAV } from '../components/SidebarLayout';
 import { getDocDisplayInfo } from '../utils/docDisplay';
@@ -92,27 +93,18 @@ export function Superseded() {
       activeType={typeFilter}
       onTypeChange={setTypeFilter}
     >
-      <div className="flex justify-between items-start mb-8 max-md:flex-col max-md:gap-4">
-        <div>
-          <h1 className="text-[28px] font-bold text-text-primary mb-2">Superseded Documents</h1>
-          <p className="text-text-muted text-sm italic">
-            "Nothing is Deleted" — Old documents preserved but marked as outdated
-          </p>
-        </div>
-        <div className="text-text-secondary text-sm bg-bg-card px-4 py-2 rounded-lg">
-          {total} supersessions
-        </div>
-      </div>
+      <PageHeader
+        title="Superseded Documents"
+        subtitle={<span className="italic">"Nothing is Deleted" — Old documents preserved but marked as outdated</span>}
+        actions={<div className="text-text-secondary text-sm bg-bg-card px-4 py-2 rounded-lg">{total} supersessions</div>}
+      />
 
       {loading ? (
-        <div className="text-center text-text-muted py-16">Loading...</div>
+        <div className="text-center text-sm text-text-secondary py-12">Loading...</div>
       ) : filtered.length === 0 ? (
-        <div className="text-center text-text-muted py-16">
-          <p>No superseded documents yet.</p>
-          <p className="mt-4 text-[13px]">
-            Use <code className="bg-bg-card px-2 py-0.5 rounded text-[13px]">oracle_supersede(oldId, newId)</code> to mark outdated documents.
-          </p>
-        </div>
+        <EmptyState title="No superseded documents yet.">
+          Use <code className="bg-bg-primary px-2 py-0.5 rounded text-[13px]">oracle_supersede(oldId, newId)</code> to mark outdated documents.
+        </EmptyState>
       ) : (
         <>
           <div className="flex flex-col gap-4">

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import type { CrossOriginResolver, NavItem } from './nav-types';
 import { isActiveInApp, isActiveNav } from './nav-types';
+import { externalHost } from './external';
 
 interface ToolsDropdownProps {
   items: NavItem[];
@@ -68,8 +69,9 @@ export function ToolsDropdown({ items, crossOriginHref, label = 'Tools ▾', com
           }`;
           if (href) {
             return (
-              <a key={href} href={href} className={cls} onClick={() => setOpen(false)} role="menuitem" aria-current={active ? 'page' : undefined}>
+              <a key={href} href={href} className={cls} onClick={() => setOpen(false)} role="menuitem" aria-current={active ? 'page' : undefined} title={`Opens ${externalHost(href)}`}>
                 {item.label}
+                <span aria-hidden="true" className="ml-1 text-[11px] text-text-muted">↗</span>
               </a>
             );
           }

@@ -45,7 +45,7 @@ export default function Schedule() {
   const inputCls = 'bg-bg-secondary border border-border rounded-lg px-3.5 py-2.5 text-text-primary text-sm flex-1 outline-none focus:border-accent transition-colors duration-150 placeholder:text-text-muted [&::-webkit-search-cancel-button]:hidden [&::-webkit-clear-button]:hidden [&::-ms-clear]:hidden';
 
   return (
-    <PageShell className="text-text-primary">
+    <PageShell width="wide" className="text-text-primary">
       <div className="flex justify-between items-start mb-6 max-md:flex-col max-md:gap-3">
         <div>
           <h1 className="text-[32px] font-bold text-text-primary mb-2">Schedule</h1>

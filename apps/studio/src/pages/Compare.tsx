@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { useNavTo } from '@ui-oracle/shared-ui';
+import { PageShell, PageHeader, EmptyState, useNavTo } from '@ui-oracle/shared-ui';
 import { search } from '../api/oracle';
 import type { Document } from '../api/oracle';
 import { Spinner } from '../components/ui/Spinner';
@@ -108,17 +108,16 @@ export function Compare() {
   const idSets = columns.map(col => new Set(col.results.map(r => r.id)));
 
   return (
-    <div className="max-w-[1200px] mx-auto py-8 px-6">
-      <h1 className="text-[28px] font-bold text-text-primary mb-1 text-center">Model Compare</h1>
-      <p className="text-text-muted text-sm text-center mb-6">Same query, different models — side by side</p>
+    <PageShell width="wide">
+      <PageHeader title="Model Compare" subtitle="Same query, different models — side by side" />
 
-      <form onSubmit={handleSubmit} className="flex gap-2 mb-6 flex-wrap">
+      <form onSubmit={handleSubmit} className="flex gap-2 mb-6 flex-wrap max-w-[640px]">
         <input
           type="text"
           value={query}
           onChange={e => setQuery(e.target.value)}
           placeholder="Search across all models..."
-          className="flex-1 min-w-[200px] bg-bg-card border border-border text-text-primary px-4 py-3 rounded-lg text-[15px] outline-none focus:border-accent transition-colors duration-150 placeholder:text-text-muted [&::-webkit-search-cancel-button]:hidden [&::-webkit-clear-button]:hidden [&::-ms-clear]:hidden"
+          className="flex-1 min-w-0 basis-full sm:basis-0 sm:min-w-[200px] bg-bg-card border border-border text-text-primary px-4 py-3 rounded-lg text-[15px] outline-none focus:border-accent transition-colors duration-150 placeholder:text-text-muted [&::-webkit-search-cancel-button]:hidden [&::-webkit-clear-button]:hidden [&::-ms-clear]:hidden"
           style={{ WebkitAppearance: 'none' }}
           autoFocus
         />
@@ -140,16 +139,16 @@ export function Compare() {
         </div>
         <button
           type="submit"
-          className="bg-accent border-none text-white px-6 py-3 rounded-lg text-[15px] font-medium cursor-pointer hover:opacity-90"
+          className="bg-accent border-none text-white px-4 py-2 rounded-lg text-[15px] font-medium cursor-pointer hover:bg-accent-hover"
         >
           Compare
         </button>
       </form>
 
       {!searched && (
-        <div className="text-center mt-12">
-          <p className="text-text-muted text-[13px] mb-3">Try comparing:</p>
-          <div className="flex justify-center gap-2 flex-wrap">
+        <div className="mt-12">
+          <p className="text-text-secondary text-sm mb-3">Try comparing:</p>
+          <div className="flex gap-2 flex-wrap">
             {['คุณภาพอากาศ air quality', 'trust safety', 'vector embedding', 'oracle philosophy', 'git workflow'].map(term => (
               <button
                 key={term}
@@ -164,7 +163,7 @@ export function Compare() {
       )}
 
       {searched && (
-        <div className="grid grid-cols-3 gap-4 max-lg:grid-cols-2 max-md:grid-cols-1">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {columns.map((col, colIdx) => {
             const modelInfo = MODELS.find(m => m.key === col.model)!;
             return (
@@ -193,7 +192,7 @@ export function Compare() {
                 {!col.loading && !col.error && (
                   <div className="p-2 flex flex-col gap-1">
                     {col.results.length === 0 && (
-                      <div className="py-12 text-center text-text-muted text-sm">No results</div>
+                      <EmptyState title="No results" className="border-0 bg-transparent" />
                     )}
                     {col.results.map((doc, rank) => {
                       // Check if this doc appears in other columns
@@ -266,6 +265,6 @@ export function Compare() {
           })}
         </div>
       )}
-    </div>
+    </PageShell>
   );
 }

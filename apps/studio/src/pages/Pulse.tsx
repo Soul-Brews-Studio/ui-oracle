@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { PageShell, PageHeader } from '@ui-oracle/shared-ui';
 import { getFeed } from '../api/oracle';
 import type { FeedEvent } from '../api/oracle';
 
@@ -437,14 +438,15 @@ export function Pulse() {
   }
 
   return (
-    <div className="min-h-[calc(100vh-64px)] bg-[#0a0a0f]">
+    <PageShell width="reading">
       {/* Active Oracles bar */}
-      <div className="border-b border-white/[0.06] px-6 py-5">
-        <div className="max-w-[960px] mx-auto">
-          <div className="flex items-center gap-4 mb-4">
-            <h1 className="text-2xl font-bold text-white">Oracle Pulse</h1>
-            <span className="text-sm font-mono text-white/50">{total} events</span>
-            <div className="ml-auto flex items-center gap-2">
+      <div className="border-b border-border pb-5">
+        <div>
+          <PageHeader
+            className="!mb-4"
+            title="Oracle Pulse"
+            subtitle={`${total} events`}
+            actions={<>
               <button
                 onClick={() => setPaused(!paused)}
                 className={`px-4 py-1.5 rounded-md text-sm font-mono font-bold border transition-all ${
@@ -458,8 +460,8 @@ export function Pulse() {
               {!paused && (
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
               )}
-            </div>
-          </div>
+            </>}
+          />
 
           {/* Active oracle pills */}
           <div className="flex items-center gap-2.5 flex-wrap">
@@ -514,9 +516,9 @@ export function Pulse() {
       </div>
 
       {/* Event stream */}
-      <div className="max-w-[960px] mx-auto px-6 py-4">
+      <div className="py-4">
         {loading && (
-          <div className="text-center text-white/30 py-12 font-mono text-sm">Loading feed...</div>
+          <div className="text-center text-text-secondary py-12 text-sm">Loading feed...</div>
         )}
 
         <div className="flex flex-col">
@@ -705,6 +707,6 @@ export function Pulse() {
           onClose={() => setTerminalTarget(null)}
         />
       )}
-    </div>
+    </PageShell>
   );
 }

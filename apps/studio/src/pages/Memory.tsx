@@ -76,7 +76,7 @@ export function Memory() {
       {view === 'map' && <Map />}
       {view === 'planets' && <Planets />}
       {(view === 'map3d' || view === 'graph3d') && (
-        <div className="h-[calc(100vh-64px)] w-full">
+        <div className="h-[calc(100dvh-var(--app-header-h,100px))] w-full">
           <PluginScene plugin={view} />
         </div>
       )}

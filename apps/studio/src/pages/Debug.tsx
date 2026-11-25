@@ -10,6 +10,7 @@
  * "What is arra doing + what's failing, right now." The observability raven.
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { PageShell, PageHeader } from '@ui-oracle/shared-ui';
 import { getDebugActions, getDebugErrors, isUnavailable } from '../api/debug';
 import type { DebugAction, DebugError } from '../api/debug';
 import {
@@ -165,22 +166,16 @@ export function Debug() {
   const backendReachable = !actionsDown || !errorsDown;
 
   return (
-    <div className="min-h-screen bg-bg-primary text-text-primary">
-      <div className="max-w-[1700px] mx-auto px-4 py-5">
-        {/* Header */}
-        <div className="flex items-center justify-between flex-wrap gap-3 mb-4">
-          <div>
-            <h1 className="text-xl font-bold flex items-center gap-2">
-              <span aria-hidden>🐦‍⬛</span> HUGINN
-              <span className="text-[10px] font-semibold uppercase tracking-widest text-text-muted border border-border rounded px-1.5 py-0.5">
-                observability
-              </span>
-            </h1>
-            <p className="text-xs text-text-muted mt-0.5">
-              what arra is doing &amp; what&apos;s failing, right now
-            </p>
-          </div>
-          <div className="flex items-center gap-3 text-xs">
+    <PageShell width="full" maxWidth="1700px" className="text-text-primary">
+      <div>
+        <PageHeader
+          title={<span className="flex items-center gap-2 flex-wrap">HUGINN
+            <span className="text-[10px] font-semibold uppercase tracking-widest text-text-muted border border-border rounded px-1.5 py-0.5 align-middle">
+              observability
+            </span></span>}
+          subtitle="what arra is doing & what's failing, right now"
+          actions={
+<div className="flex flex-wrap items-center gap-3 text-xs">
             <span className="flex items-center gap-1.5 text-text-secondary">
               <span
                 className={`inline-block w-2 h-2 rounded-full ${
@@ -204,7 +199,8 @@ export function Debug() {
               {paused ? 'Resume' : 'Pause'}
             </button>
           </div>
-        </div>
+          }
+        />
 
         {/* Three streams */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -231,7 +227,7 @@ export function Debug() {
           />
         </div>
       </div>
-    </div>
+    </PageShell>
   );
 }
 
@@ -268,7 +264,7 @@ function StreamPane({
     });
 
   return (
-    <div className="flex flex-col bg-bg-card border border-border rounded-xl overflow-hidden h-[calc(100vh-170px)] min-h-[420px]">
+    <div className="flex flex-col bg-bg-card border border-border rounded-xl overflow-hidden h-[calc(100dvh-var(--app-header-h,100px)-170px)] min-h-[420px]">
       <header className="px-4 py-3 border-b border-border">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">

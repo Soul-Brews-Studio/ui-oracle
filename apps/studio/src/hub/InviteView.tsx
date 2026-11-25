@@ -43,7 +43,7 @@ export function InviteView({ api, onChange }: { api: HubApi; onChange: () => voi
         <Card title="Give this to the node">
           <div data-testid="invite-code" className="font-mono text-3xl tracking-widest text-ok-text">{invite.code}</div>
           <div className="mt-2 text-sm text-text-muted">label {invite.label} · node lasts {invite.grant} · code expires {new Date(invite.codeExpiresAt).toLocaleTimeString()}</div>
-          <pre className="mt-4 overflow-x-auto rounded-2xl bg-field p-3 font-mono text-sm text-text">arra join {hubUrl} --code {invite.code}</pre>
+          <pre className="mt-4 overflow-x-auto rounded-xl bg-field p-3 font-mono text-sm text-text">arra join {hubUrl} --code {invite.code}</pre>
           <button className={`${ghost} mt-3`} onClick={() => navigator.clipboard?.writeText(invite.code)}>Copy code</button>
         </Card>
       )}

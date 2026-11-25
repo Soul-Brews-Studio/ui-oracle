@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { AppLink as Link } from '@ui-oracle/shared-ui';
+import { PageShell, PageHeader, AppLink as Link } from '@ui-oracle/shared-ui';
 import { search } from '../api/oracle';
 import type { Document } from '../api/oracle';
 
@@ -96,20 +96,20 @@ export function Playground() {
   const maxTime = Math.max(ftsCol?.time || 0, vectorCol?.time || 0, hybridCol?.time || 0, 1);
 
   return (
-    <div className="min-h-[calc(100vh-64px)]">
+    <PageShell width="wide">
+      <PageHeader title="Vector Playground" subtitle="Compare search modes side-by-side" />
+
       {/* Pre-search landing */}
       {!searched && !loading && (
-        <div className="max-w-[800px] mx-auto py-20 px-6 text-center">
-          <h1 className="text-5xl max-md:text-[32px] font-extrabold mb-2 bg-gradient-to-br from-[#60a5fa] via-[#a78bfa] to-[#4ade80] bg-clip-text text-transparent animate-[gradientShift_4s_ease-in-out_infinite] bg-[length:200%_200%]">Vector Playground</h1>
-          <p className="text-base text-text-muted mb-10">Compare search modes side-by-side</p>
+        <div>
 
-          <form onSubmit={handleSubmit} className="flex gap-3 max-w-[640px] mx-auto mb-6">
+          <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-3 max-w-[640px] mb-6">
             <input
               type="text"
               value={query}
               onChange={e => setQuery(e.target.value)}
               placeholder="Type a query to compare FTS, Vector, and Hybrid..."
-              className="flex-1 py-3.5 px-[18px] rounded-[10px] text-[15px] text-text-primary border border-border outline-none focus:border-accent transition-colors duration-200 placeholder:text-text-muted backdrop-blur-lg [&::-webkit-search-cancel-button]:hidden [&::-webkit-clear-button]:hidden [&::-ms-clear]:hidden"
+              className="flex-1 min-w-0 py-3.5 px-[18px] rounded-[10px] text-[15px] text-text-primary border border-border outline-none focus:border-accent transition-colors duration-200 placeholder:text-text-muted backdrop-blur-lg [&::-webkit-search-cancel-button]:hidden [&::-webkit-clear-button]:hidden [&::-ms-clear]:hidden"
               style={{ WebkitAppearance: 'none', background: 'rgba(20, 20, 35, 0.6)' }}
               autoFocus
             />
@@ -122,7 +122,7 @@ export function Playground() {
             </button>
           </form>
 
-          <div className="grid grid-cols-3 max-md:grid-cols-1 gap-4 mt-10">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-8">
             <div
               className="rounded-[14px] py-7 px-6 text-left backdrop-blur-lg cursor-default transition-all duration-300 hover:-translate-y-0.5 hover:border-[rgba(96,165,250,0.4)] hover:shadow-[0_0_24px_rgba(96,165,250,0.08)]"
               style={{ background: 'rgba(20, 20, 35, 0.6)', border: '1px solid rgba(255, 255, 255, 0.06)' }}
@@ -150,14 +150,14 @@ export function Playground() {
 
       {/* Post-search view */}
       {(searched || loading) && (
-        <div className="max-w-[1200px] mx-auto py-8 px-6">
-          <form onSubmit={handleSubmit} className="flex gap-3 max-w-[640px] mx-auto mb-6">
+        <div>
+          <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-3 max-w-[640px] mb-6">
             <input
               type="text"
               value={query}
               onChange={e => setQuery(e.target.value)}
               placeholder="Search query..."
-              className="flex-1 py-3.5 px-[18px] rounded-[10px] text-[15px] text-text-primary border border-border outline-none focus:border-accent transition-colors duration-200 placeholder:text-text-muted backdrop-blur-lg [&::-webkit-search-cancel-button]:hidden [&::-webkit-clear-button]:hidden [&::-ms-clear]:hidden"
+              className="flex-1 min-w-0 py-3.5 px-[18px] rounded-[10px] text-[15px] text-text-primary border border-border outline-none focus:border-accent transition-colors duration-200 placeholder:text-text-muted backdrop-blur-lg [&::-webkit-search-cancel-button]:hidden [&::-webkit-clear-button]:hidden [&::-ms-clear]:hidden"
               style={{ WebkitAppearance: 'none', background: 'rgba(20, 20, 35, 0.6)' }}
               autoFocus
             />
@@ -229,7 +229,7 @@ export function Playground() {
           )}
         </div>
       )}
-    </div>
+    </PageShell>
   );
 }
 

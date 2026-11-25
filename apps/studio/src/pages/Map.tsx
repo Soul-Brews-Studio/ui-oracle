@@ -1145,7 +1145,7 @@ void main() {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center h-[calc(100vh-64px)] gap-3">
+      <div className="flex flex-col items-center justify-center h-[calc(100dvh-var(--app-header-h,100px))] gap-3">
         <div className="text-lg text-text-primary">Loading knowledge map...</div>
         <div className="text-[13px] text-text-muted">Fetching embeddings from all engines...</div>
       </div>
@@ -1154,14 +1154,14 @@ void main() {
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center h-[calc(100vh-64px)] gap-3">
+      <div className="flex flex-col items-center justify-center h-[calc(100dvh-var(--app-header-h,100px))] gap-3">
         <div className="text-base text-[#ef4444]">Failed to load map: {error}</div>
       </div>
     );
   }
 
   return (
-    <div className="flex h-[calc(100vh-64px)] overflow-hidden">
+    <div className="flex h-[calc(100dvh-var(--app-header-h,100px))] overflow-hidden">
       <div className="flex-1 relative overflow-hidden">
         <form onSubmit={handleSearch} className="absolute top-4 left-1/2 -translate-x-1/2 flex gap-2 z-10 items-center">
           <input

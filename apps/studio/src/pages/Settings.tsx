@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { PageShell, PageHeader } from '@ui-oracle/shared-ui';
 import { getSettings, updateSettings, type Settings as SettingsType } from '../api/oracle';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -143,16 +144,15 @@ export function Settings() {
 
   if (loading) {
     return (
-      <div className="max-w-[640px] mx-auto px-6 py-12">
+      <PageShell width="form">
         <div className="text-center text-text-muted py-12">Loading settings...</div>
-      </div>
+      </PageShell>
     );
   }
 
   return (
-    <div className="max-w-[640px] mx-auto px-6 py-12">
-      <h1 className="text-[32px] font-bold text-text-primary mb-2">Settings</h1>
-      <p className="text-text-secondary mb-8">Configure authentication and security options</p>
+    <PageShell width="form">
+      <PageHeader title="Settings" subtitle="Configure authentication and security options" />
 
       {message && (
         <div className={`px-4 py-3 rounded-lg text-sm mb-6 ${
@@ -164,7 +164,7 @@ export function Settings() {
         </div>
       )}
 
-      <div className="bg-bg-card border border-border rounded-xl p-6 mb-6">
+      <div className="bg-bg-card border border-border rounded-xl p-4 md:p-6 mb-6">
         <h2 className="text-lg font-semibold text-text-primary mb-2">Password</h2>
         <p className="text-text-secondary text-sm mb-5">
           {settings?.hasPassword
@@ -214,7 +214,7 @@ export function Settings() {
             <button
               type="submit"
               disabled={saving || !newPassword}
-              className="bg-accent border-none text-white px-6 py-3 rounded-lg text-sm font-medium cursor-pointer transition-colors duration-200 hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed"
+              className="bg-accent border-none text-white px-4 py-2 rounded-lg text-sm font-medium cursor-pointer transition-colors duration-200 hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {saving ? 'Saving...' : settings?.hasPassword ? 'Change Password' : 'Set Password'}
             </button>
@@ -224,7 +224,7 @@ export function Settings() {
                 type="button"
                 onClick={handleRemovePassword}
                 disabled={saving || (settings?.hasPassword && !currentPassword)}
-                className="bg-transparent border border-[rgba(239,68,68,0.5)] text-[#ef4444] px-6 py-3 rounded-lg text-sm font-medium cursor-pointer transition-all duration-200 hover:bg-[rgba(239,68,68,0.1)] disabled:opacity-50 disabled:cursor-not-allowed"
+                className="bg-transparent border border-[rgba(239,68,68,0.5)] text-[#ef4444] px-4 py-2 rounded-lg text-sm font-medium cursor-pointer transition-all duration-200 hover:bg-[rgba(239,68,68,0.1)] disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Remove Password
               </button>
@@ -233,13 +233,13 @@ export function Settings() {
         </form>
       </div>
 
-      <div className="bg-bg-card border border-border rounded-xl p-6 mb-6">
+      <div className="bg-bg-card border border-border rounded-xl p-4 md:p-6 mb-6">
         <h2 className="text-lg font-semibold text-text-primary mb-2">Authentication</h2>
 
         <div className="flex justify-between items-center gap-4 py-4 border-b border-border last:border-b-0 last:pb-0">
           <div className="flex flex-col gap-1">
             <span className="text-[15px] font-medium text-text-primary">Require Password</span>
-            <span className="text-[13px] text-text-muted">
+            <span className="text-[13px] text-text-secondary">
               When enabled, users must enter the password to access the dashboard
             </span>
           </div>
@@ -261,13 +261,13 @@ export function Settings() {
         )}
       </div>
 
-      <div className="bg-bg-card border border-border rounded-xl p-6 mb-6">
+      <div className="bg-bg-card border border-border rounded-xl p-4 md:p-6 mb-6">
         <h2 className="text-lg font-semibold text-text-primary mb-2">Local Network Bypass</h2>
 
         <div className="flex justify-between items-center gap-4 py-4 border-b border-border last:border-b-0 last:pb-0">
           <div className="flex flex-col gap-1">
             <span className="text-[15px] font-medium text-text-primary">Skip auth for local network</span>
-            <span className="text-[13px] text-text-muted">
+            <span className="text-[13px] text-text-secondary">
               When enabled, requests from local IP addresses (192.168.x.x, 10.x.x.x, 127.0.0.1) bypass authentication
             </span>
           </div>
@@ -295,6 +295,6 @@ export function Settings() {
           </span>
         </div>
       </div>
-    </div>
+    </PageShell>
   );
 }
