@@ -178,3 +178,6 @@ body {
   0%, 100% { transform: translateY(0px); }
   50% { transform: translateY(-6px); }
 }
+
+/* Hub pages (#3110): their token names and scoped helpers. */
+@import "../../studio/src/hub/hub-theme.css";

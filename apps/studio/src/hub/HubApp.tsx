@@ -1,6 +1,6 @@
 /**
  * arra hub pages (#3110): the Studio route /hub (one app, one dist), on `arra serve --hub`.
- * Status · Topology · Nodes · Search · Graph · Ontology · Invite. On the hub machine (loopback) everything works; from any
+ * Status · Topology · Nodes · History · Search · Graph · Ontology · Invite. On the hub machine (loopback) everything works; from any
  * other machine /api/arra answers 403, so only the public hub card shows and the rest says
  * "owner only". Invite and revoke can never run from another machine: the server refuses.
  */
@@ -16,9 +16,10 @@ import { NodesView } from './NodesView';
 import { SearchView } from './SearchView';
 import { StatusView } from './StatusView';
 import { TopologyView } from './TopologyView';
+import { HistoryView } from './HistoryView';
 import { ErrorLine, OwnerOnly } from './ui';
 
-const LABEL: Record<Tab, string> = { status: 'Status', topology: 'Topology', nodes: 'Nodes', search: 'Search', graph: 'Graph', ontology: 'Ontology', invite: 'Invite' };
+const LABEL: Record<Tab, string> = { status: 'Status', topology: 'Topology', nodes: 'Nodes', history: 'History', search: 'Search', graph: 'Graph', ontology: 'Ontology', invite: 'Invite' };
 
 export function HubApp({ api = defaultApi }: { api?: HubApi }) {
   const [tab, setTab] = useState<Tab>(() => (typeof location === 'undefined' ? 'status' : tabFromHash(location.hash)));
@@ -72,6 +73,7 @@ export function HubApp({ api = defaultApi }: { api?: HubApi }) {
         {tab === 'topology' && <TopologyView api={api} owner={owner} publicHub={publicHub} showIps={showIps} onChange={load} />}
         {tab !== 'status' && tab !== 'topology' && owner === false && <OwnerOnly what={LABEL[tab]} />}
         {tab === 'nodes' && owner && <NodesView api={api} nodes={nodes.nodes} invites={nodes.invites} onChange={load} showIps={showIps} />}
+        {tab === 'history' && owner && <HistoryView />}
         {tab === 'search' && owner && <SearchView api={api} />}
         {tab === 'graph' && owner && <GraphView />}
         {tab === 'ontology' && owner && <OntologyView />}
