@@ -1,5 +1,4 @@
 import { Children, isValidElement } from 'react';
-import { useLocation } from 'react-router-dom';
 import { AppLink as Link, PageHeader, PageShell, PillRow, pillClass } from '@ui-oracle/shared-ui';
 
 const DEFAULT_TYPES = [
@@ -44,9 +43,7 @@ export function SidebarLayout({
   onTypeChange,
   filters = DEFAULT_TYPES,
   linkBase = '/feed',
-  navItems,
 }: SidebarLayoutProps) {
-  const location = useLocation();
   // Title first, then the section pills, like every other page: a leading
   // <PageHeader> child is lifted above the pill row.
   const [first, ...rest] = Children.toArray(children);
@@ -55,21 +52,9 @@ export function SidebarLayout({
   return (
     <PageShell width="reading">
       {header}
-      <PillRow className="mb-6" label="Sections">
-        {navItems && navItems.length > 0 && (
-          <>
-            {navItems.map(item => (
-              <Link
-                key={item.path}
-                to={item.path}
-                className={pillClass(location.pathname === item.path)}
-              >
-                {item.label}
-              </Link>
-            ))}
-            {filters.length > 0 && <span className="w-px h-4 shrink-0 bg-border mx-1" />}
-          </>
-        )}
+      {filters.length > 0 && <PillRow className="mb-6" label="Filters">
+        {/* Section pages (Traces, Evolution, ...) are the PageHeader's section tabs now (sections.ts);
+            this row keeps only the filters. `navItems` is accepted for old callers and ignored. */}
         {filters.length > 0 && filters.map(t => (
           onTypeChange ? (
             <button
@@ -90,7 +75,7 @@ export function SidebarLayout({
             </Link>
           )
         ))}
-      </PillRow>
+      </PillRow>}
 
       <div className="min-w-0">
         {header ? rest : children}

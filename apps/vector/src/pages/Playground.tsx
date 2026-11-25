@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { PageHeader, PageShell } from '@ui-oracle/shared-ui';
 import { search } from '../api/oracle';
 import type { Document } from '../api/oracle';
 import { demoSearch } from '../data/demo';
@@ -101,88 +102,50 @@ export default function Playground({ backendLive }: { backendLive: boolean }) {
   const maxTime = Math.max(ftsCol?.time || 0, vectorCol?.time || 0, hybridCol?.time || 0, 1);
 
   return (
-    <div className="min-h-[calc(100vh-64px)]">
-      {/* Hero / pre-search */}
+    <PageShell width="wide">
+      <PageHeader
+        title="Vector Playground"
+        subtitle="See how keyword, semantic, and hybrid search compare, side by side, on real Oracle memory"
+      />
+
+      <form onSubmit={handleSubmit} className="flex max-md:flex-col gap-3 max-w-[640px] mb-4">
+        <input
+          type="text"
+          value={query}
+          onChange={e => setQuery(e.target.value)}
+          placeholder="e.g. what is oracle"
+          className="flex-1 py-3.5 px-[18px] rounded-[12px] text-[15px] text-text-primary border border-border outline-none focus:border-accent transition-colors duration-200 placeholder:text-text-muted backdrop-blur-lg [&::-webkit-search-cancel-button]:hidden [&::-webkit-clear-button]:hidden [&::-ms-clear]:hidden"
+          style={{ WebkitAppearance: 'none', background: 'rgba(20, 20, 35, 0.6)' }}
+          autoFocus
+        />
+        <button
+          type="submit"
+          className="bg-accent border-none text-white py-3.5 px-7 rounded-[12px] text-[15px] font-semibold cursor-pointer transition-all duration-200 whitespace-nowrap hover:bg-accent-hover disabled:opacity-60 disabled:cursor-not-allowed"
+          disabled={loading}
+        >{loading ? 'Searching…' : 'Compare →'}</button>
+      </form>
+
+      <div className="flex flex-wrap gap-2 mb-6">
+        {SAMPLE_QUERIES.map(q => (
+          <button
+            key={q}
+            onClick={() => doSearch(q)}
+            className="text-[12px] py-1.5 px-3 rounded-full transition-colors duration-200 hover:border-accent hover:text-text-primary"
+            style={{ background: 'rgba(20, 20, 35, 0.5)', border: '1px solid rgba(255, 255, 255, 0.08)', color: 'var(--color-text-secondary)' }}
+          >{q}</button>
+        ))}
+      </div>
+
       {!searched && !loading && (
-        <div className="max-w-[900px] mx-auto py-16 max-md:py-10 px-6 text-center">
-          <div className="text-6xl max-md:text-5xl mb-4 inline-block animate-[float_4s_ease-in-out_infinite]">🔮</div>
-          <h1 className="text-[56px] max-md:text-[36px] font-extrabold leading-[1.05] tracking-tight mb-4 bg-gradient-to-br from-[#60a5fa] via-[#a78bfa] to-[#4ade80] bg-clip-text text-transparent animate-[gradientShift_6s_ease-in-out_infinite] bg-[length:200%_200%]">
-            Vector Playground
-          </h1>
-          <p className="text-[17px] max-md:text-[15px] text-text-secondary mb-2 max-w-[620px] mx-auto leading-relaxed">
-            See how <span className="text-[#60a5fa] font-semibold">keyword</span>, <span className="text-[#a78bfa] font-semibold">semantic</span>, and <span className="text-[#4ade80] font-semibold">hybrid</span> search compare — side by side, on real Oracle memory.
-          </p>
-          <p className="text-[13px] text-text-muted mb-10">Type a query, or pick one below.</p>
-
-          <form onSubmit={handleSubmit} className="flex max-md:flex-col gap-3 max-w-[640px] mx-auto mb-6">
-            <input
-              type="text"
-              value={query}
-              onChange={e => setQuery(e.target.value)}
-              placeholder="e.g. what is oracle"
-              className="flex-1 py-3.5 px-[18px] rounded-[12px] text-[15px] text-text-primary border border-border outline-none focus:border-accent transition-colors duration-200 placeholder:text-text-muted backdrop-blur-lg [&::-webkit-search-cancel-button]:hidden [&::-webkit-clear-button]:hidden [&::-ms-clear]:hidden"
-              style={{ WebkitAppearance: 'none', background: 'rgba(20, 20, 35, 0.6)' }}
-              autoFocus
-            />
-            <button
-              type="submit"
-              className="bg-accent border-none text-white py-3.5 px-7 rounded-[12px] text-[15px] font-semibold cursor-pointer transition-all duration-200 whitespace-nowrap hover:bg-accent-hover hover:scale-[1.02] disabled:opacity-60 disabled:cursor-not-allowed"
-              disabled={loading}
-            >
-              Compare →
-            </button>
-          </form>
-
-          <div className="flex flex-wrap justify-center gap-2 mb-12">
-            {SAMPLE_QUERIES.map(q => (
-              <button
-                key={q}
-                onClick={() => doSearch(q)}
-                className="text-[12px] py-1.5 px-3 rounded-full transition-all duration-200 hover:-translate-y-0.5 hover:border-accent hover:text-text-primary"
-                style={{ background: 'rgba(20, 20, 35, 0.5)', border: '1px solid rgba(255, 255, 255, 0.08)', color: 'var(--color-text-secondary)' }}
-              >{q}</button>
-            ))}
-          </div>
-
-          <div className="grid grid-cols-3 max-md:grid-cols-1 gap-4 mt-4 text-left">
-            <FeatureCard color="#60a5fa" title="FTS5" desc="Full-text search using SQLite's FTS5 engine. Fast keyword matching with BM25 ranking." />
-            <FeatureCard color="#a78bfa" title="Vector" desc="Semantic search using ChromaDB embeddings. Finds conceptually similar results — even with different words." />
-            <FeatureCard color="#4ade80" title="Hybrid" desc="Best of both. Combines results and boosts docs found by both engines simultaneously." />
-          </div>
+        <div className="grid grid-cols-3 max-md:grid-cols-1 gap-4 text-left">
+          <FeatureCard color="#60a5fa" title="FTS5" desc="Full-text search using SQLite's FTS5 engine. Fast keyword matching with BM25 ranking." />
+          <FeatureCard color="#a78bfa" title="Vector" desc="Semantic search using ChromaDB embeddings. Finds conceptually similar results, even with different words." />
+          <FeatureCard color="#4ade80" title="Hybrid" desc="Best of both. Combines results and boosts docs found by both engines simultaneously." />
         </div>
       )}
 
-      {/* Post-search */}
       {(searched || loading) && (
-        <div className="max-w-[1300px] mx-auto py-6 px-6">
-          <form onSubmit={handleSubmit} className="flex max-md:flex-col gap-3 max-w-[720px] mx-auto mb-4">
-            <input
-              type="text"
-              value={query}
-              onChange={e => setQuery(e.target.value)}
-              placeholder="Search query..."
-              className="flex-1 py-3.5 px-[18px] rounded-[12px] text-[15px] text-text-primary border border-border outline-none focus:border-accent transition-colors duration-200 placeholder:text-text-muted backdrop-blur-lg [&::-webkit-search-cancel-button]:hidden [&::-webkit-clear-button]:hidden [&::-ms-clear]:hidden"
-              style={{ WebkitAppearance: 'none', background: 'rgba(20, 20, 35, 0.6)' }}
-              autoFocus
-            />
-            <button
-              type="submit"
-              className="bg-accent border-none text-white py-3.5 px-7 rounded-[12px] text-[15px] font-semibold cursor-pointer transition-all duration-200 whitespace-nowrap hover:bg-accent-hover hover:scale-[1.02] disabled:opacity-60 disabled:cursor-not-allowed"
-              disabled={loading}
-            >{loading ? 'Searching…' : 'Compare →'}</button>
-          </form>
-
-          <div className="flex flex-wrap justify-center gap-2 mb-6">
-            {SAMPLE_QUERIES.slice(0, 4).map(q => (
-              <button
-                key={q}
-                onClick={() => doSearch(q)}
-                className="text-[11px] py-1 px-2.5 rounded-full transition-all duration-200 hover:border-accent hover:text-text-primary"
-                style={{ background: 'rgba(20, 20, 35, 0.4)', border: '1px solid rgba(255, 255, 255, 0.06)', color: 'var(--color-text-muted)' }}
-              >{q}</button>
-            ))}
-          </div>
-
+        <div>
           {loading && (
             <div className="grid grid-cols-3 max-md:grid-cols-1 gap-4 mt-2">
               {[0, 1, 2].map(i => (
@@ -210,7 +173,7 @@ export default function Playground({ backendLive }: { backendLive: boolean }) {
       )}
 
       {selectedDoc && <DocDrawer doc={selectedDoc} onClose={() => setSelectedDoc(null)} />}
-    </div>
+    </PageShell>
   );
 }
 

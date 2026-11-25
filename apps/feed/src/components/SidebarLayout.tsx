@@ -1,5 +1,6 @@
+import { Children, isValidElement } from 'react';
 import { useLocation } from 'react-router-dom';
-import { AppLink as Link, PageShell, PillRow, pillClass, useBase, withBase } from '@ui-oracle/shared-ui';
+import { AppLink as Link, PageHeader, PageShell, PillRow, pillClass, useBase, withBase } from '@ui-oracle/shared-ui';
 
 const DEFAULT_TYPES = [
   { key: 'all', label: 'All' },
@@ -47,9 +48,13 @@ export function SidebarLayout({
 }: SidebarLayoutProps) {
   const location = useLocation();
   const base = useBase();
+  // Title first, then filters: a leading <PageHeader> child is lifted above the pill row.
+  const [first, ...rest] = Children.toArray(children);
+  const header = isValidElement(first) && first.type === PageHeader ? first : null;
 
   return (
     <PageShell width="reading">
+      {header}
       {/* Horizontal pill bar */}
       <PillRow className="mb-6" label="Filter">
         {navItems && navItems.length > 0 && (
@@ -89,7 +94,7 @@ export function SidebarLayout({
       </PillRow>
 
       <div className="min-w-0">
-        {children}
+        {header ? rest : children}
       </div>
     </PageShell>
   );

@@ -17,5 +17,5 @@ async function ping(): Promise<boolean> {
  * /vector, …) instead of bouncing across subdomains.
  */
 export function CombinedHeader() {
-  return <AppHeader ping={ping} combinedMode inAppHref={inAppHref} />;
+  return <AppHeader ping={ping} combinedMode inAppHref={inAppHref} sections />;
 }

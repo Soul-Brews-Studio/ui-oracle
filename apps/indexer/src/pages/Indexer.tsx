@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { PageShell, PageHeader } from '@ui-oracle/shared-ui';
 import {
   getConfig,
   scanFiles,
@@ -72,8 +73,8 @@ export default function Indexer() {
   const pct = progress && progress.total > 0 ? Math.round((progress.current / progress.total) * 100) : 0;
 
   return (
-    <div className="min-h-screen p-6 max-w-6xl mx-auto">
-      <h1 className="text-2xl font-bold text-accent mb-6">Indexer Settings</h1>
+    <PageShell width="wide">
+      <PageHeader title="Indexer" />
 
       {error && (
         <div className="bg-danger/10 border border-danger/30 text-danger rounded-lg p-3 mb-4">
@@ -82,7 +83,7 @@ export default function Indexer() {
       )}
 
       {/* Config Panel */}
-      <section className="bg-bg-card border border-border rounded-lg p-4 mb-4">
+      <section className="bg-bg-card border border-border rounded-xl p-4 md:p-6 mb-4">
         <h2 className="text-sm font-semibold text-text-dim mb-3 uppercase tracking-wide">Configuration</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3">
           <div>
@@ -135,7 +136,7 @@ export default function Indexer() {
 
       {/* File Browser + Status */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-        <section className="bg-bg-card border border-border rounded-lg p-4">
+        <section className="bg-bg-card border border-border rounded-xl p-4 md:p-6">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-semibold text-text-dim uppercase tracking-wide">
               Files {files.length > 0 && <span className="text-accent">({files.length})</span>}
@@ -167,7 +168,7 @@ export default function Indexer() {
           </div>
         </section>
 
-        <section className="bg-bg-card border border-border rounded-lg p-4">
+        <section className="bg-bg-card border border-border rounded-xl p-4 md:p-6">
           <h2 className="text-sm font-semibold text-text-dim mb-3 uppercase tracking-wide">Status</h2>
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
@@ -201,7 +202,7 @@ export default function Indexer() {
       </div>
 
       {/* Action Bar */}
-      <section className="bg-bg-card border border-border rounded-lg p-4">
+      <section className="bg-bg-card border border-border rounded-xl p-4 md:p-6">
         <div className="flex items-center gap-3">
           <button
             onClick={handleScan}
@@ -242,6 +243,6 @@ export default function Indexer() {
           )}
         </div>
       </section>
-    </div>
+    </PageShell>
   );
 }

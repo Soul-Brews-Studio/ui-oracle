@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { PageShell } from '@ui-oracle/shared-ui';
+import { PageShell, PageHeader, PillRow, pillClass } from '@ui-oracle/shared-ui';
 import { Spinner } from '../components/ui/Spinner';
 import { API_BASE } from '../api/oracle';
 
@@ -27,6 +27,13 @@ interface ThreadDetail {
   thread: { id: number; title: string; status: string; created_at: string; issue_url: string | null };
   messages: Message[];
 }
+
+const FILTERS: { label: string; value: string | null }[] = [
+  { label: 'All', value: null },
+  { label: 'Open', value: 'open' },
+  { label: 'Answered', value: 'answered' },
+  { label: 'Closed', value: 'closed' },
+];
 
 const STATUS_COLORS: Record<string, string> = {
   answered: '#4ade80',
@@ -108,19 +115,35 @@ export function Forum() {
   }
 
   return (
-    <PageShell>
-      <div className="flex gap-6 max-md:flex-col max-md:gap-0">
-        {/* Sidebar — hidden on mobile when thread is selected */}
-      <div className={`w-[180px] shrink-0 flex flex-col max-md:w-full ${selected ? 'max-md:hidden' : ''}`}>
-        <div className="flex justify-between items-center mb-3">
-          <h2 className="text-xs font-mono uppercase tracking-wide text-text-muted">Threads</h2>
+    <PageShell width="wide">
+      <PageHeader
+        title="Forum"
+        subtitle="Threads with the Oracle"
+        actions={
           <button
             onClick={() => { setSearchParams({ new: 'true' }); setSelected(null); }}
-            className="bg-accent text-white px-3 py-1.5 rounded-lg text-sm font-medium cursor-pointer border-none hover:bg-accent-hover transition-all duration-150"
+            className="bg-accent text-white px-4 py-2 rounded-lg text-sm font-medium cursor-pointer border-none hover:bg-accent-hover transition-all duration-150 whitespace-nowrap"
           >
-            + New
+            New thread
           </button>
-        </div>
+        }
+      />
+      <PillRow label="Thread status" className="mb-6">
+          {FILTERS.map(f => (
+            <button
+              key={f.label}
+              role="tab"
+              aria-selected={statusFilter === f.value}
+              onClick={() => setSearchParams(f.value ? { status: f.value } : {})}
+              className={pillClass(statusFilter === f.value)}
+            >
+              {f.label}
+            </button>
+          ))}
+        </PillRow>
+      <div className="flex gap-6 max-md:flex-col max-md:gap-0">
+        {/* Sidebar — hidden on mobile when thread is selected */}
+      <div className={`w-[220px] shrink-0 flex flex-col max-md:w-full ${selected ? 'max-md:hidden' : ''}`}>
 
         <div className="flex-1 overflow-y-auto space-y-1">
           {visibleThreads.map(t => (

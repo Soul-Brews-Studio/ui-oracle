@@ -33,7 +33,7 @@ export function MapPlugin() {
   if (data.documents.length === 0) return <PlanetsEmpty />;
 
   return (
-    <div className="relative h-[calc(100vh-64px)] overflow-hidden bg-black">
+    <div className="relative h-[calc(100dvh-var(--app-header-h,100px))] overflow-hidden bg-black">
       <KnowledgeMap
         documents={filteredDocs}
         clusters={data.clusters}

@@ -35,12 +35,15 @@ export const plugins: CanvasPlugin[] = [
   { id: 'map3d', label: 'Map 3D', kind: 'three', mount: map3dMount },
 ];
 
-export const DEFAULT_PLUGIN_ID = 'map';
+/** Views that live in Memory now (/map?view=...). Kept resolvable so old ?plugin= links still open, but not offered in the picker. */
+export const MEMORY_PLUGIN_IDS = ['map', 'planets', 'map3d', 'graph3d'];
+
+export const DEFAULT_PLUGIN_ID = 'wave';
 
 export function findPlugin(id: string): CanvasPlugin | undefined {
   return plugins.find((p) => p.id === id);
 }
 
 export function listPlugins(): CanvasPlugin[] {
-  return plugins;
+  return plugins.filter((p) => !MEMORY_PLUGIN_IDS.includes(p.id));
 }

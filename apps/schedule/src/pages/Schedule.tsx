@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { PageShell } from '@ui-oracle/shared-ui';
+import { PageShell, PageHeader } from '@ui-oracle/shared-ui';
 import { addScheduleEvent, getScheduleMd } from '../api/oracle';
 
 export default function Schedule() {
@@ -46,23 +46,21 @@ export default function Schedule() {
 
   return (
     <PageShell width="wide" className="text-text-primary">
-      <div className="flex justify-between items-start mb-6 max-md:flex-col max-md:gap-3">
-        <div>
-          <h1 className="text-[32px] font-bold text-text-primary mb-2">Schedule</h1>
-          <p className="text-text-secondary">
-            <code className="bg-bg-card px-1.5 py-0.5 rounded text-[13px]">~/.oracle/psi/inbox/schedule.md</code>
-          </p>
-        </div>
-        <button
-          className="bg-accent text-black border-none px-4 py-2 rounded-lg text-sm font-medium cursor-pointer whitespace-nowrap hover:opacity-90 transition-opacity duration-150"
-          onClick={() => setShowForm(!showForm)}
-        >
-          {showForm ? 'Cancel' : '+ Add Event'}
-        </button>
-      </div>
+      <PageHeader
+        title="Schedule"
+        subtitle={<code className="bg-bg-card px-1.5 py-0.5 rounded text-[13px]">~/.oracle/psi/inbox/schedule.md</code>}
+        actions={
+          <button
+            className="bg-accent text-black border-none px-4 py-2 rounded-lg text-sm font-medium cursor-pointer whitespace-nowrap hover:opacity-90 transition-opacity duration-150"
+            onClick={() => setShowForm(!showForm)}
+          >
+            {showForm ? 'Cancel' : 'Add event'}
+          </button>
+        }
+      />
 
       {showForm && (
-        <form onSubmit={handleAdd} className="bg-bg-card border border-border rounded-xl p-5 mb-6 flex flex-col gap-3">
+        <form onSubmit={handleAdd} className="bg-bg-card border border-border rounded-xl p-4 md:p-6 mb-4 flex flex-col gap-3">
           <div className="flex gap-3 max-md:flex-col">
             <input
               className={inputCls}
@@ -108,14 +106,14 @@ export default function Schedule() {
       {loading ? (
         <div className="text-text-muted py-12 text-center">Loading schedule...</div>
       ) : content ? (
-        <div className="bg-bg-card border border-border rounded-xl p-6 leading-[1.7] text-text-primary text-sm [&_h1]:my-4 [&_h1]:mb-2 [&_h1]:text-xl [&_h1]:text-text-primary [&_h2]:my-4 [&_h2]:mb-2 [&_h2]:text-[17px] [&_h2]:text-text-primary [&_h3]:my-4 [&_h3]:mb-2 [&_h3]:text-[15px] [&_h3]:text-text-primary [&_p]:my-2 [&_table]:w-full [&_table]:border-collapse [&_table]:my-3 [&_th]:text-left [&_th]:px-3 [&_th]:py-2 [&_th]:border-b [&_th]:border-border [&_th]:text-xs [&_th]:text-text-muted [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-wide [&_td]:text-left [&_td]:px-3 [&_td]:py-2 [&_td]:border-b [&_td]:border-border [&_td]:text-[13px] [&_td]:text-text-primary [&_strong]:text-accent [&_hr]:border-none [&_hr]:border-t [&_hr]:border-border [&_hr]:my-4">
+        <div className="bg-bg-card border border-border rounded-xl p-4 md:p-6 leading-[1.7] text-text-primary text-sm [&_h1]:my-4 [&_h1]:mb-2 [&_h1]:text-xl [&_h1]:text-text-primary [&_h2]:my-4 [&_h2]:mb-2 [&_h2]:text-[17px] [&_h2]:text-text-primary [&_h3]:my-4 [&_h3]:mb-2 [&_h3]:text-[15px] [&_h3]:text-text-primary [&_p]:my-2 [&_table]:w-full [&_table]:border-collapse [&_table]:my-3 [&_th]:text-left [&_th]:px-3 [&_th]:py-2 [&_th]:border-b [&_th]:border-border [&_th]:text-xs [&_th]:text-text-muted [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-wide [&_td]:text-left [&_td]:px-3 [&_td]:py-2 [&_td]:border-b [&_td]:border-border [&_td]:text-[13px] [&_td]:text-text-primary [&_strong]:text-accent [&_hr]:border-none [&_hr]:border-t [&_hr]:border-border [&_hr]:my-4">
           <Markdown remarkPlugins={[remarkGfm]}>{content}</Markdown>
         </div>
       ) : (
         <div className="text-center py-16 text-text-secondary">
           <p className="my-2">No schedule found.</p>
           <p className="text-sm text-text-muted my-2">
-            Use <code className="bg-bg-card px-1.5 py-0.5 rounded text-[13px]">oracle_schedule_add</code> or click "+ Add Event".
+            Use <code className="bg-bg-card px-1.5 py-0.5 rounded text-[13px]">oracle_schedule_add</code> or click "Add event".
           </p>
         </div>
       )}

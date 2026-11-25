@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
-import { useNavTo } from '@ui-oracle/shared-ui';
+import { SectionTabs, useNavTo } from '@ui-oracle/shared-ui';
+import { useLocation } from 'react-router-dom';
 import { usePlanetsData } from '../hooks/usePlanetsData';
 import { usePlanetsSearch } from '../hooks/usePlanetsSearch';
 import { PlanetsCanvas } from '../components/planets/PlanetsCanvas';
@@ -11,6 +12,8 @@ import { TYPE_COLORS } from '../lib/type-colors';
 
 export function Planets() {
   const navigate = useNavTo();
+  // Memory already floats the section tabs over this scene; only the standalone /planets route needs its own.
+  const standalone = useLocation().pathname.replace(/\/$/, '').endsWith('/planets');
   const data = usePlanetsData();
   const search = usePlanetsSearch();
   const [visibleTypes, setVisibleTypes] = useState<Set<string>>(() => new Set(Object.keys(TYPE_COLORS)));
@@ -59,6 +62,9 @@ export function Planets() {
           onToggleType={toggleType}
         />
         <NebulaLegend />
+        {standalone && <div className="absolute top-3 left-3 z-20 max-w-[calc(100%-1.5rem)] rounded-[10px] p-1 backdrop-blur-xl border border-white/[0.08]" style={{ background: 'rgba(10, 10, 20, 0.7)' }}>
+          <SectionTabs />
+        </div>}
       </div>
       <PlanetsSidebar
         stats={data.stats}

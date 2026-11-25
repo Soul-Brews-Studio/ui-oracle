@@ -33,6 +33,9 @@ export { PageShell } from './components/PageShell';
 export { PageHeader } from './components/PageHeader';
 export { PillRow, pillClass } from './components/Pills';
 export { EmptyState } from './components/EmptyState';
+export { SectionLinks, SectionTabs } from './components/SectionNav';
+export { SECTIONS, sectionFor, tabMatches } from './sections';
+export type { Section, SectionTab } from './sections';
 export { BuildFooter } from './components/BuildFooter';
 
 // Base-path routing (combined single-origin bundle; identity when standalone)

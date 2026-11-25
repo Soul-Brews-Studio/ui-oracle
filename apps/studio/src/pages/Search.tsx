@@ -81,9 +81,8 @@ export function Search() {
 
   return (
     <PageShell width="reading">
-      <div className="max-w-[720px] mx-auto">
       <PageHeader title="Search Oracle" />
-
+      <div className="max-w-[720px]">
       <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-3 mb-8">
         <input
           type="text"

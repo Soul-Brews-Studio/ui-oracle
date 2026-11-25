@@ -78,6 +78,7 @@ function StudioExtras() {
 export function Header() {
   return (
     <AppHeader
+      sections
       ping={ping}
       topRowExtras={<StudioExtras />}
       menuConfig={menuConfig}

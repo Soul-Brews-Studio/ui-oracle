@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
-import { AppLink as Link } from '@ui-oracle/shared-ui';
+import { AppLink as Link, SectionTabs } from '@ui-oracle/shared-ui';
 import * as THREE from 'three';
 import {
   DEFAULT_PLUGIN_ID,
@@ -32,7 +32,11 @@ export default function CanvasHost() {
 
 function PluginPicker({ plugins, activeId }: { plugins: CanvasPlugin[]; activeId: string }) {
   return (
-    <div className="absolute top-3 right-3 z-30 flex flex-wrap gap-1 max-w-[60vw] justify-end">
+    <div className="absolute top-3 left-3 z-30 flex flex-col items-start gap-2 max-w-[calc(100%-1.5rem)]">
+      <div className="rounded-[10px] p-1 backdrop-blur-xl border border-white/[0.08] max-w-full" style={{ background: 'rgba(10, 10, 20, 0.7)' }}>
+        <SectionTabs />
+      </div>
+      <div className="flex flex-wrap gap-1">
       {plugins.map((p) => {
         const active = p.id === activeId;
         return (
@@ -49,6 +53,7 @@ function PluginPicker({ plugins, activeId }: { plugins: CanvasPlugin[]; activeId
           </Link>
         );
       })}
+      </div>
     </div>
   );
 }
@@ -118,7 +123,7 @@ function ThreeHost({ mount }: { mount: SceneMount }) {
   }, [mount]);
 
   return (
-    <div ref={wrapRef} className="w-full h-[calc(100vh-64px)] bg-black overflow-hidden">
+    <div ref={wrapRef} className="w-full h-[calc(100dvh-var(--app-header-h,100px))] bg-black overflow-hidden">
       <canvas ref={canvasRef} className="w-full h-full block" />
     </div>
   );

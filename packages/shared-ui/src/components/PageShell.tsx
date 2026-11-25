@@ -17,17 +17,18 @@ interface PageShellProps {
 
 /**
  * The one page container. Every top-level route uses it so every page starts at
- * the same distance under the header with the same side gutters:
+ * the header's left edge, the same distance under it, with the same side gutters:
  * 20px / 24px phone gutters, 24px / 32px top padding (phone / desktop).
  */
 export function PageShell({ children, width = 'reading', maxWidth, className = '' }: PageShellProps) {
   const cap = maxWidth ?? LAYOUT.widths[width];
+  // Same container and gutters as the header row, so every page starts at the header's left edge;
+  // the width only moves the right edge (Nat: "margin, content not same").
   return (
-    <div
-      className={`mx-auto w-full min-w-0 px-5 py-6 md:px-6 md:py-8 ${className}`}
-      style={cap === 'none' ? undefined : { maxWidth: cap }}
-    >
-      {children}
+    <div className={`mx-auto w-full min-w-0 max-w-[1400px] px-5 py-6 md:px-6 md:py-8 ${className}`}>
+      <div className="min-w-0" style={cap === 'none' ? undefined : { maxWidth: cap }}>
+        {children}
+      </div>
     </div>
   );
 }

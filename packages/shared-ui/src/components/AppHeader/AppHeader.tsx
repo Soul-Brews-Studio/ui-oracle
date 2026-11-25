@@ -14,6 +14,7 @@ import bakedMenu from '../../baked-menu';
 import { reorderNavSet, type MenuConfig } from './reorder';
 import { SubNav } from '../SubNav';
 import { keepInApp, leavesSelfServedApp } from './external';
+import { SectionLinks } from '../SectionNav';
 
 const DEFAULT_NAV: NavSet = {
   main: [
@@ -109,6 +110,8 @@ interface AppHeaderProps {
   /** In-app href resolver for combined bundles. When provided, nav renders an
    *  in-app <Link> to inAppHref(item) instead of <Link to={item.path}>. Opt-in. */
   inAppHref?: (item: NavItem) => string;
+  /** The seven-section top bar (sections.ts) instead of the menu-driven nav + Tools dropdown. */
+  sections?: boolean;
 }
 
 // Unified cross-origin resolver — preserves BOTH `item.path` and `item.query`
@@ -169,6 +172,7 @@ export function AppHeader({
   menuConfig,
   combinedMode = false,
   inAppHref,
+  sections = false,
 }: AppHeaderProps) {
   const { nav, loaded } = useMenu(fallbackNav, { skipFetch: BAKED_NAV !== null });
   const reorderedNav = useMemo(() => {
@@ -226,9 +230,10 @@ export function AppHeader({
       <nav
         id="app-main-nav"
         className={`${menuOpen ? 'flex' : 'hidden'} md:flex flex-wrap items-center gap-1 px-5 md:px-6 pb-3 max-w-[1400px] mx-auto transition-opacity duration-150 ${
-          loaded ? 'opacity-100' : 'opacity-0'
+          loaded || sections ? 'opacity-100' : 'opacity-0'
         }`}
       >
+        {sections ? <SectionLinks /> : (<>
         <MainNav
           items={reorderedNav.main}
           crossOriginHref={crossOriginHref}
@@ -246,6 +251,7 @@ export function AppHeader({
             />
           </>
         )}
+        </>)}
       </nav>
       {menuOpen && (
         <div className="md:hidden flex flex-wrap items-center gap-2 px-5 pb-3 text-xs font-mono">
@@ -253,7 +259,7 @@ export function AppHeader({
           {topRowExtras}
         </div>
       )}
-      {menuConfig?.subnav && menuConfig.subnav.length > 0 && (
+      {!sections && menuConfig?.subnav && menuConfig.subnav.length > 0 && (
         <SubNav items={menuConfig.subnav} />
       )}
     </header>

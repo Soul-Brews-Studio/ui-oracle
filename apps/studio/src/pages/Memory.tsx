@@ -1,3 +1,4 @@
+import { SectionTabs } from '@ui-oracle/shared-ui';
 import { useSearchParams } from 'react-router-dom';
 import { Map } from './Map';
 import { Planets } from './Planets';
@@ -29,46 +30,18 @@ function isViewId(v: string | null): v is ViewId {
 }
 
 export function Memory() {
-  const [params, setParams] = useSearchParams();
+  const [params] = useSearchParams();
   const raw = params.get('view');
   const view: ViewId = isViewId(raw) ? raw : 'map';
 
-  const setView = (id: ViewId) => {
-    const next = new URLSearchParams(params);
-    if (id === 'map') next.delete('view');
-    else next.set('view', id);
-    // Each view owns its own search/filter params; drop them when switching so
-    // a stale highlight from one view does not leak into the next.
-    next.delete('q');
-    setParams(next, { replace: true });
-  };
+  // Switching views is a plain link now (section tabs carry ?view=); it drops ?q= as it always did.
 
   return (
     <div className="relative">
-      {/* Floating switcher — top-left is the one free corner across these views
-          (top-centre is each view's search box, top-right is the fps readout). */}
-      <div
-        className="absolute top-3 left-3 z-20 flex gap-1 rounded-[10px] p-1 backdrop-blur-xl border border-white/[0.08]"
-        style={{ background: 'rgba(10, 10, 20, 0.7)' }}
-        role="tablist"
-        aria-label="Memory view"
-      >
-        {VIEWS.map(v => (
-          <button
-            key={v.id}
-            role="tab"
-            aria-selected={v.id === view}
-            onClick={() => setView(v.id)}
-            title={v.hint}
-            className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors duration-150 cursor-pointer border ${
-              v.id === view
-                ? 'text-accent border-accent/40 bg-accent/15'
-                : 'text-text-secondary border-transparent hover:text-accent'
-            }`}
-          >
-            {v.label}
-          </button>
-        ))}
+      {/* Memory's pages (Feed, Map, Planets, Map 3D, Graph 3D, Canvas) as the one section tab row, floating
+          top-left over the scene: the one free corner (top-centre is each view's search, top-right the fps). */}
+      <div className="absolute top-3 left-3 z-20 max-w-[calc(100%-1.5rem)] rounded-[10px] p-1 backdrop-blur-xl border border-white/[0.08]" style={{ background: 'rgba(10, 10, 20, 0.7)' }}>
+        <SectionTabs />
       </div>
 
       {/* Only the active view is mounted — each builds a full Three.js scene, so

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { PageShell } from '@ui-oracle/shared-ui';
+import { PageHeader, PageShell } from '@ui-oracle/shared-ui';
 import type { Document } from '../api/oracle';
 import { getStats } from '../api/oracle';
 import { hostLabel } from '../api/host';
@@ -57,6 +57,7 @@ export default function Compare() {
 
   return (
     <PageShell width="wide">
+      <PageHeader title="Compare models" subtitle="Run one query against each embedding model and see where they agree" />
       <CompareHUD
         query={query}
         onQueryChange={setQuery}
