@@ -16,7 +16,7 @@ export interface OssieDoc {
 }
 export interface ReadDoc { id: string; title: string; source: string; type: string; source_file: string; created_by: string | null; superseded_by: string | null; content: string }
 
-type Fetcher = typeof fetch;
+type Fetcher = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 /** Studio talks to the backend its host picker points at, not to the page's own origin. */
 const hostFetch: Fetcher = (input, init) => fetch(typeof input === 'string' ? apiUrl(input) : input, init);
 

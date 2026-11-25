@@ -41,7 +41,7 @@ export interface SearchResult { query: string; groups: SearchGroup[]; notes?: st
 
 export interface NewInvite { hub: string; code: string; label: string; grant: string; codeExpiresAt: string }
 
-type Fetcher = typeof fetch;
+type Fetcher = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 /** Studio talks to the backend its host picker points at, not to the page's own origin. */
 const hostFetch: Fetcher = (input, init) => fetch(typeof input === 'string' ? apiUrl(input) : input, init);
 

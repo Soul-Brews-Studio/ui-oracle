@@ -19,7 +19,7 @@ export interface Topology {
   ossie: OssieStatus;
 }
 
-type Fetcher = typeof fetch;
+type Fetcher = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 /** Studio talks to the backend its host picker points at, not to the page's own origin. */
 const hostFetch: Fetcher = (input, init) => fetch(typeof input === 'string' ? apiUrl(input) : input, init);
 
