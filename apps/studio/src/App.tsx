@@ -27,6 +27,7 @@ import { Canvas } from './pages/Canvas';
 import { Planets } from './pages/Planets';
 import { MenuEditor } from './pages/MenuEditor';
 import { Debug } from './pages/Debug';
+import { Hub } from './pages/Hub';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { getStats } from './api/oracle';
 import { setVaultRepo } from './utils/docDisplay';
@@ -142,6 +143,7 @@ function GatedStudio({ header }: { header: boolean }) {
           <Route path="planets" element={<RequireAuth><Planets /></RequireAuth>} />
           <Route path="plugins" element={<RequireAuth><Plugins /></RequireAuth>} />
           <Route path="schedule" element={<RequireAuth><Schedule /></RequireAuth>} />
+          <Route path="hub" element={<RequireAuth><Hub /></RequireAuth>} />
           <Route path="settings" element={<RequireAuth><Settings /></RequireAuth>} />
           <Route path="menu" element={<RequireAuth><MenuEditor /></RequireAuth>} />
         </Routes>

@@ -77,6 +77,13 @@ const baked: BakedMenu = {
     "studio": "studio.buildwithoracle.com"
   },
   {
+    "path": "/hub",
+    "label": "Hub",
+    "group": "main",
+    "order": 75,
+    "source": "api"
+  },
+  {
     "path": "/",
     "label": "Canvas",
     "group": "main",
