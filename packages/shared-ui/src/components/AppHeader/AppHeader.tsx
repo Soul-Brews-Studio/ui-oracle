@@ -209,13 +209,14 @@ export function AppHeader({
           <VersionChip backendVersion={backendVersion} />
         </Brand>
 
-        <div className="hidden md:flex items-center gap-2 text-xs font-mono shrink-0">
+        {/* The full group needs ~990px (brand + space picker + host picker + chip): from lg up. */}
+        <div className="hidden lg:flex items-center gap-2 text-xs font-mono shrink-0">
           {sections && <SpaceSwitcher />}
           <HostPicker />
           <BackendChip ping={ping} />
           {topRowExtras}
         </div>
-        <div className="flex md:hidden items-center gap-2 text-xs font-mono shrink-0">
+        <div className="flex lg:hidden items-center gap-2 text-xs font-mono shrink-0">
           <BackendChip ping={ping} />
           <button
             type="button"
@@ -256,7 +257,7 @@ export function AppHeader({
         </>)}
       </nav>
       {menuOpen && (
-        <div className="md:hidden flex flex-wrap items-center gap-2 px-5 pb-3 text-xs font-mono">
+        <div className="lg:hidden flex flex-wrap items-center gap-2 px-5 md:px-6 pb-3 text-xs font-mono">
           {sections && <SpaceSwitcher />}
           <HostPicker />
           {topRowExtras}

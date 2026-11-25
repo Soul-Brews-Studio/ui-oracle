@@ -185,3 +185,7 @@ a {
 }
 
 @import "./hub/hub-theme.css";
+
+/* Reserve the scrollbar lane on every page, so a long page and a short one centre the same
+   column at the same x (a 5px jump at 1440 otherwise). */
+html { scrollbar-gutter: stable; }
