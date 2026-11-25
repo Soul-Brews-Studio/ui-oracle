@@ -35,6 +35,7 @@ export { PillRow, pillClass } from './components/Pills';
 export { EmptyState } from './components/EmptyState';
 export { SectionLinks, SectionTabs } from './components/SectionNav';
 export { SECTIONS, sectionFor, tabMatches } from './sections';
+export { getSpace, setSpace, onSpaceChange, spaceParam } from './space';
 export type { Section, SectionTab } from './sections';
 export { BuildFooter } from './components/BuildFooter';
 

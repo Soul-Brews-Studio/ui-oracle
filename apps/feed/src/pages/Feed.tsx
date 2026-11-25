@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { list } from '../api/oracle';
 import type { Document } from '../api/oracle';
 import { LogCard } from '../components/LogCard';
-import { PageHeader } from '@ui-oracle/shared-ui';
+import { PageHeader, EmptyState } from '@ui-oracle/shared-ui';
 import { SidebarLayout } from '../components/SidebarLayout';
 
 export function Feed() {
@@ -59,6 +59,9 @@ export function Feed() {
       </div>
 
       {loading && <div className="text-center text-sm text-text-secondary py-6">Loading...</div>}
+      {!loading && docs.length === 0 && (
+        <EmptyState title="No notes in this space">Pick another space in the header, or All spaces.</EmptyState>
+      )}
 
       {!loading && hasMore && (
         <button

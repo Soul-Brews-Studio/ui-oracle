@@ -1,3 +1,4 @@
+import { getSpace } from '@ui-oracle/shared-ui';
 import { apiUrl } from './host';
 import { cached } from '../lib/cache';
 export { apiUrl } from './host';
@@ -42,6 +43,7 @@ export interface Document {
 
 export async function list(type: string = 'all', limit: number = 20, offset: number = 0): Promise<{ results: Document[]; total: number }> {
   const params = new URLSearchParams({ type, limit: String(limit), offset: String(offset) });
+  if (getSpace() !== 'all') params.set('space', getSpace());
   const qs = params.toString();
   return cached(hk(`list:${type}:${qs}`), ONE_HOUR, async () => {
     const res = await fetch(`${API_BASE}/list?${qs}`);

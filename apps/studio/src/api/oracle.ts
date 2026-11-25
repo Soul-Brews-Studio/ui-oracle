@@ -1,3 +1,4 @@
+import { getSpace } from '@ui-oracle/shared-ui';
 // Oracle API client
 //
 // Host resolution follows the maw-ui / local.drizzle.studio pattern:
@@ -104,6 +105,7 @@ export async function search(
   model?: string
 ): Promise<SearchResult & { mode?: string; model?: string; warning?: string }> {
   const params = new URLSearchParams({ q: query, type, limit: String(limit), mode });
+  if (getSpace() !== 'all') params.set('space', getSpace());
   if (model) params.set('model', model);
   const qs = params.toString();
   return cached(hk(`search:${qs}`), TEN_MIN, async () => {
@@ -115,6 +117,7 @@ export async function search(
 // List/browse documents
 export async function list(type: string = 'all', limit: number = 20, offset: number = 0): Promise<{ results: Document[]; total: number }> {
   const params = new URLSearchParams({ type, limit: String(limit), offset: String(offset) });
+  if (getSpace() !== 'all') params.set('space', getSpace());
   const qs = params.toString();
   return cached(hk(`list:${type}:${qs}`), ONE_HOUR, async () => {
     const res = await fetch(`${API_BASE}/list?${qs}`);

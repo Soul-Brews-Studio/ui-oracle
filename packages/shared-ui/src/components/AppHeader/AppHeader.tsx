@@ -15,6 +15,7 @@ import { reorderNavSet, type MenuConfig } from './reorder';
 import { SubNav } from '../SubNav';
 import { keepInApp, leavesSelfServedApp } from './external';
 import { SectionLinks } from '../SectionNav';
+import { SpaceSwitcher } from './SpaceSwitcher';
 
 const DEFAULT_NAV: NavSet = {
   main: [
@@ -209,6 +210,7 @@ export function AppHeader({
         </Brand>
 
         <div className="hidden md:flex items-center gap-2 text-xs font-mono shrink-0">
+          {sections && <SpaceSwitcher />}
           <HostPicker />
           <BackendChip ping={ping} />
           {topRowExtras}
@@ -255,6 +257,7 @@ export function AppHeader({
       </nav>
       {menuOpen && (
         <div className="md:hidden flex flex-wrap items-center gap-2 px-5 pb-3 text-xs font-mono">
+          {sections && <SpaceSwitcher />}
           <HostPicker />
           {topRowExtras}
         </div>
