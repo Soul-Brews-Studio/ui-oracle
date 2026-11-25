@@ -22,12 +22,17 @@ interface PageShellProps {
  */
 export function PageShell({ children, width = 'reading', maxWidth, className = '' }: PageShellProps) {
   const cap = maxWidth ?? LAYOUT.widths[width];
-  // Same container and gutters as the header row; the content column is centred inside it
-  // (Nat 2026-11-25: "ui center is better"), so pages of one width share both edges.
+  // Root cause of "margin not same" (Nat 2026-11-25): pages of different widths, each centred, start
+  // at different x. Every page now sits in ONE centred column (the wide width), so the left edge
+  // is identical on every page; `width` only caps how far the content runs to the right inside it.
+  // `full` (scenes) takes the whole row.
+  const column = width === 'full' && !maxWidth ? undefined : { maxWidth: LAYOUT.widths.wide };
   return (
     <div className={`mx-auto w-full min-w-0 max-w-[1400px] px-5 py-6 md:px-6 md:py-8 ${className}`}>
-      <div className="mx-auto min-w-0" style={cap === 'none' ? undefined : { maxWidth: cap }}>
-        {children}
+      <div className="mx-auto min-w-0" style={column}>
+        <div className="min-w-0" style={cap === 'none' ? undefined : { maxWidth: cap }}>
+          {children}
+        </div>
       </div>
     </div>
   );
